@@ -3,8 +3,7 @@
 </a>
 
 #
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
-
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)[![test_linux](https://github.com/jwaiton/CARP/actions/workflows/test_init_linux.yml/badge.svg)](https://github.com/jwaiton/CARP/actions)[![test_macOS](https://github.com/jwaiton/CARP/actions/workflows/test_init_macOS.yml/badge.svg)](https://github.com/jwaiton/CARP/actions)[![test_windows](https://github.com/jwaiton/CARP/actions/workflows/test_init_windows.yml/badge.svg)](https://github.com/jwaiton/CARP/actions)
 ### What is CARP?
 
 **CARP** is a readout and acquisition program for CAEN digitisers (generation 1 and 2), using the [CAEN FELib](https://pypi.org/project/caen-felib/) python bindings and PyQt5.
