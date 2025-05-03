@@ -1,0 +1,26 @@
+# This is a simple workflow to test the initialisation on differing platforms.
+# Expected to fail on Windows.
+name: Test Initialisation
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        python-version: [3.12]
+        platform: [macOS-latest, ubuntu-latest, windows-latest]\
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up
+        run: |
+          echo "Setting up environment"
+          echo "Python version: ${{ matrix.python-version }}"
+          echo "Platform: ${{ matrix.platform }}"
+          
+          source setup.sh
