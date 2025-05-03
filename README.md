@@ -1,5 +1,5 @@
 <a href="https://github.com/jwaiton/CARP">
-    <img src="assets/CARP_final.png" alt="CARP" style="display: block; margin: 0;"/>
+    <img src="assets/CARP.png" alt="CARP" style="display: block; margin: 0;"/>
 </a>
 
 #
