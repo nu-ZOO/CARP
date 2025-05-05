@@ -1,6 +1,5 @@
 import pandas as pd
 
-import h5py
 import ast
 import configparser
 
