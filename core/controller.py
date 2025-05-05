@@ -47,7 +47,7 @@ class Controller:
             print("No digitiser configuration file provided. Digitiser will not be connected.")
             self.digitiser = None
         else:
-            self.digitiser = self.connect_digisitiser()
+            self.digitiser = self.connect_digitiser()
 
 
     def update_fps(self):
@@ -61,7 +61,7 @@ class Controller:
         self.main_window.show()
         return self.app.exec()
     
-    def connect_digisitiser(self):
+    def connect_digitiser(self):
         '''
         Connect to the digitiser using the provided configuration file.
         This is a placeholder function and should be replaced with actual
