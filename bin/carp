@@ -37,6 +37,7 @@ args = parser.parse_args()
 def run_CARP(dig_config, rec_config):
     '''
     Run CARP with the given digitiser and recording config files.
+    Currently only for testing.
     Args:
         dig_config (str): Path to the digitiser config file.
         rec_config (str): Path to the recording config file.
