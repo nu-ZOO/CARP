@@ -25,8 +25,13 @@ def read_config_file(file_path  :  str) -> dict:
     # setup config parser
     config = configparser.ConfigParser()
 
-    # read in arguments, require the required ones
-    config.read(file_path)
+    try:
+        # read in arguments, require the required ones
+        config.read(file_path)
+    except TypeError as e:
+        print(f"Error reading config file: {e}")
+        return None
+    
     arg_dict = {}
     for section in config.sections():
         for key in config[section]:
