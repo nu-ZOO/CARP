@@ -27,8 +27,8 @@ CAEN Acquisition and Readout Program (CARP)
 Use 'carp --help' for more information
 ======================================''', formatter_class=argparse.RawTextHelpFormatter)
 
-parser.add_argument("dig_config", help = 'digitiser config file.')
-parser.add_argument("rec_config", help = 'recording config file.')
+parser.add_argument("dig_config", nargs='?', default = None, help = 'digitiser config file.')
+parser.add_argument("rec_config", nargs='?', default = None, help = 'recording config file.')
 # acquire arguments
 
 args = parser.parse_args()
@@ -44,7 +44,7 @@ def run_CARP(dig_config, rec_config):
     '''
 
     from core import controller
-    controller = controller.Controller()
+    controller = controller.Controller(dig_config, rec_config)
     sys.exit(controller.run_app())
 
 
