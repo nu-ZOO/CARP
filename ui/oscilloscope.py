@@ -55,8 +55,8 @@ class OscilloScopeScreen(pg.PlotWidget):
         super().__init__(parent=parent, background='w', plotItem=plotItem, **kwargs)
         
         styles = {'color': 'k', 'font-size': '12px'}
-        self.setLabel('left', 'Voltage (V)', **styles)
-        self.setLabel('bottom', 'Time (s)', **styles)
+        self.setLabel('left', 'Voltage (ADCs)', **styles)
+        self.setLabel('bottom', 'Time (ns)', **styles)
 
         self.showGrid(x = True, y = True)
         self.setXRange(0, 1, padding = 0.02)

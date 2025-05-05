@@ -62,11 +62,12 @@ class StatsBox(QGroupBox):
         super().__init__("Stats", parent = parent)
 
         self.fps_label = QLabel("FPS: 0")
+        #self.events_collected = QLabel(f'evts: {self.acq.events_collected}')
+        #self.rate = QLabel(f'Rate: {self.acq.rate} Hz')
 
         layout = QHBoxLayout()
         self.setLayout(layout)
 
-        layout.addWidget(QLabel("Refresh Rate:"))
         layout.addWidget(self.fps_label)
 
 class ConnectDigitiser(QGroupBox):
@@ -89,7 +90,7 @@ class ConnectDigitiser(QGroupBox):
         layout.addWidget(self.reset_con)
 
         self.reset_con.clicked.connect(self.reset_connection)
-        self.con.clicked.connect(self.connect)
+        self.con.clicked.connect(self.controller.connect_digitiser)
     
     def reset_connection(self):
         print('Resetting connection...')
@@ -101,4 +102,4 @@ class ConnectDigitiser(QGroupBox):
     def connect(self):
         print(f'Attempting connection to {self.controller}...')
         # if not connected, try to connect.
-        self.connect_digitiser()
+        self.controller.connect_digitiser()
