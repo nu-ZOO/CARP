@@ -15,9 +15,47 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QGroupBox,
     QLabel,
+    QFileDialog,
     QApplication
 )
 
+class config_files(QGroupBox):
+    def __init__(self, parent=None):
+        super().__init__("Configuration Files", parent = parent)
+
+        self.dig_conf = QPushButton("Digitiser Config")
+        self.rec_conf = QPushButton("Recording Config")
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        layout.addWidget(self.dig_conf)
+        layout.addWidget(self.rec_conf)
+
+        # upon pressing open up file dialog
+        self.dig_conf.clicked.connect(lambda: self.find_file('dig'))
+        self.rec_conf.clicked.connect(lambda: self.find_file('rec'))
+
+    def find_file(self, conf_type):
+        '''
+        Open a file dialog to select a configuration file.
+        '''
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+        file_name, _ = QFileDialog.getOpenFileName(self, "Select Configuration File", "", "Conf Files (*.conf);;All Files (*)", options=options)
+        if file_name:
+            print(f"Selected {conf_type} configuration file: {file_name}")
+            # save config file to controller dig_config and rec_config
+            if conf_type == 'dig':
+                self.dig_config = file_name
+            elif conf_type == 'rec':
+                self.rec_config = file_name
+            else:
+                print("Invalid configuration file type selected.")
+                return
+        else:
+            print("No file selected.")
+            return
 
 class StatsBox(QGroupBox):
     def __init__(self, parent=None):
@@ -32,28 +70,35 @@ class StatsBox(QGroupBox):
         layout.addWidget(self.fps_label)
 
 class ConnectDigitiser(QGroupBox):
-    def __init__(self, parent=None):
-        super().__init__("Connect Digitiser", parent = parent)
+    def __init__(self, controller, parent=None):
+        super().__init__("Connection", parent = parent)
+        self.controller = controller
 
-        self.connect        = QPushButton("Connect")
-        self.combobox_ports = QComboBox()
+        self.isConnected = False
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+
+        self.con        = QPushButton("Connect")
+        #self.combobox_ports = QComboBox()
         self.reset_con        = QPushButton("Reset")
 
-        layout.addWidget(self.connect)
-        layout.addWidget(self.combobox_ports)
+        layout.addWidget(self.con)
+        #layout.addWidget(self.combobox_ports)
         layout.addWidget(self.reset_con)
 
-        self.refresh.clicked.connect(self.reset_connection)
-        self.refresh.clicked.connect(self.connect)
+        self.reset_con.clicked.connect(self.reset_connection)
+        self.con.clicked.connect(self.connect)
     
     def reset_connection(self):
-        
-        self.combobox_ports.clear()
+        print('Resetting connection...')
+        #self.combobox_ports.clear()
         # here instead add the digitiser type connected, num channels perhaps
         # for now, just add some random ports
-        self.combobox_ports.addItems([f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}"])
+        #self.combobox_ports.addItems([f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}"])
     
     def connect(self):
-
+        print(f'Attempting connection to {self.controller}...')
         # if not connected, try to connect.
         self.connect_digitiser()

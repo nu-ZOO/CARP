@@ -35,10 +35,18 @@ class ControlPanel(QFrame):
 
         self.setFrameShape(QFrame.StyledPanel)
 
+        self.connect_digitiser = elements.ConnectDigitiser(self.controller)
         self.stats_box = elements.StatsBox()
+        self.conf_files = elements.config_files()
 
         self.layout = QVBoxLayout()
+
+        self.layout.addWidget(self.connect_digitiser)
+        self.layout.addWidget(self.stats_box)
+        self.layout.addWidget(self.conf_files)
+
         self.layout.addStretch()
+
         self.setLayout(self.layout)
 
 
