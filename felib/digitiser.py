@@ -60,8 +60,8 @@ class Digitiser():
     def connect(self):
         '''
         Connect to the digitiser using the generated URI.
-        
         '''
+        
         try:
             self.dig = device.connnect(self.URI)
             self.dig.cmd.RESET()
@@ -86,13 +86,19 @@ class Digitiser():
                   pre_trigger: Optional[int] = 0,
                   trigger_level: Optional[str] = 'SWTRG'):
         '''
-        Configure the digitiser with the provided settings.
+        Configure the digitiser with the provided settings and calibrate it.
         '''        
+
         self.dig.par.RECORDLENGTHT.value = f'{record_length}'
         self.dig.par.PRETRIGGERT.value = f'{pre_trigger}'
         self.dig.par.ACQTRIGGERSOURCE.value = trigger_level
         print(f"Digitiser configured with record length {record_length}, pre-trigger {pre_trigger}, trigger level {trigger_level}.")
 
+        try:
+            self.dig.cmd.CALIBRATEADC()
+            print("Digitiser calibrated.")
+        except Exception as e:
+            raise RuntimeError(f"Failed to calibrate digitiser.\n{e}")
 
     def start_acquisition(self):
         '''
