@@ -1,0 +1,79 @@
+import numpy as np
+#from caen_felib import lib, device, error
+from typing import Optional
+
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QMainWindow,
+    QPushButton,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGroupBox,
+    QLabel,
+    QApplication
+)
+
+from PySide6.QtCore import QTimer
+
+from core.io import read_config_file
+from felib.digitiser import Digitiser
+from ui import oscilloscope
+
+class Controller:
+    def __init__(self, 
+                 dig_config: Optional[str] = None, 
+                 rec_config: Optional[str] = None):
+        '''
+        Initialise controller for GUI and digitiser
+        '''
+
+        # gui first
+        self.app = QApplication([])
+        self.main_window = oscilloscope.MainWindow(controller = self)
+
+        self.fps_timer  = QTimer()
+        self.fps_timer.timeout.connect(self.update_fps)
+        self.spf = 1 # seconds per frame
+
+
+        # digitiser connection second
+
+        self.dig_config = dig_config
+        self.rec_config = rec_config
+
+        if dig_config is None:
+            print("No digitiser configuration file provided. Digitiser will not be connected.")
+            self.digitiser = None
+        else:
+            self.digitiser = self.connect_digisitiser()
+
+
+    def update_fps(self):
+        '''
+        Update the FPS label in the GUI
+        '''
+        fps = 1 / self.spf
+        self.main_window.stats_box.fps_label.setText(f"FPS: {fps:.2f}")
+
+    def run_app(self):
+        self.main_window.show()
+        return self.app.exec()
+    
+    def connect_digisitiser(self):
+        '''
+        Connect to the digitiser using the provided configuration file.
+        This is a placeholder function and should be replaced with actual
+        digitiser connection logic.
+        '''
+
+        # Load in configs
+        dig_dict = read_config_file(self.dig_config)
+        
+        if dig_dict is None:
+            raise ValueError("Digitiser configuration file not found or invalid.")
+        else:
+            self.digitiser = Digitiser(dig_dict)
+            self.digitiser.connect()
+

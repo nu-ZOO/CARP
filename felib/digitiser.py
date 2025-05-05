@@ -1,0 +1,127 @@
+'''
+jwaiton 05/25
+
+Class(es) to handle the digitiser connection and acquisition.
+'''
+
+from typing import Optional
+
+from felib.dig1_utils import generate_digitiser_uri
+
+
+class Digitiser():
+    def __init__(self, dig_dict : dict):
+        '''
+        Create the digitiser object and generate the URI
+        needed to connect.
+        '''
+        self.dig_dict = dig_dict
+        self.dig_name = dig_dict.get('dig_name')
+        self.dig_gen = int(dig_dict.get('dig_gen'))
+
+        if self.dig_gen == 1:
+            self.con_type = dig_dict.get('con_type')
+            self.link_num = int(dig_dict.get('link_num', 0))
+            self.conet_node = int(dig_dict.get('conet_node', 0))
+            self.vme_base_address = dig_dict.get('vme_base_address', 0)
+            self.dig_authority = dig_dict.get('dig_authority', 'caen.internal')
+        elif self.dig_gen == 2:
+            # not implemented yet, raise error
+            raise NotImplementedError("Digitiser generation 2 not implemented yet.")
+        else:
+            raise ValueError("Invalid digitiser generation specified in the configuration.")
+        
+        self.URI = self.generate_uri()
+        self.collect = False
+
+    def generate_uri(self):
+        '''
+        Generate the URI needed to connect to the digitiser.
+        This is a wrapper for the generate_digitiser_uri function.
+        '''
+        # generate URI for each generation
+        if self.dig_gen == 1:
+            return generate_digitiser_uri(
+                dig_gen=self.dig_gen,
+                con_type=self.con_type,
+                link_num=self.link_num,
+                conet_node=self.conet_node,
+                vme_base_address=self.vme_base_address,
+                dig_authority=self.dig_authority
+            )
+        elif self.dig_gen == 2:
+            # not implemented yet, raise error
+            # you should never reach this code
+            raise NotImplementedError("Digitiser generation 2 not implemented yet.")
+        else:
+            raise ValueError("Invalid digitiser generation specified in the configuration.")
+        
+
+    def connect(self):
+        '''
+        Connect to the digitiser using the generated URI.
+        
+        '''
+        try:
+            self.dig = device.connnect(self.URI)
+            self.dig.cmd.RESET()
+            print(f'Connected to digitiser {self.dig_name} at {self.URI}.')
+
+            # extract relevant information from the digitiser
+            self.dig_info = {
+                'n_ch'        : int(self.dig.par.NUMCH.value),
+                'sample_rate' : int(self.dig.par.SAMPLERATE.value),
+                'ADCs'        : int(self.dig.par.ADC_NBITS.value),
+                'firmware'    : dig.par.FWTYPE.value,
+            }
+        except Exception as e:
+            raise ConnectionError(f"Failed to connect to the digitiser.\n{e}")
+        finally:
+            # close the connection
+            self.dig.close()
+
+
+    def configure(self, 
+                  record_length: Optional[int] = 0,
+                  pre_trigger: Optional[int] = 0,
+                  trigger_level: Optional[str] = 'SWTRG'):
+        '''
+        Configure the digitiser with the provided settings.
+        '''        
+        self.dig.par.RECORDLENGTHT.value = f'{record_length}'
+        self.dig.par.PRETRIGGERT.value = f'{pre_trigger}'
+        self.dig.par.ACQTRIGGERSOURCE.value = trigger_level
+        print(f"Digitiser configured with record length {record_length}, pre-trigger {pre_trigger}, trigger level {trigger_level}.")
+
+
+    def start_acquisition(self):
+        '''
+        Start the digitiser acquisition.
+        '''
+        self.collect = True
+        #try:
+            #self.dig.cmd.START()
+            #self.collect = True    
+            #print("Digitiser acquisition started.")
+        #except Exception as e:
+        #    raise RuntimeError(f"Failed to start digitiser acquisition.\n{e}")
+             #self.collect = True
+        
+    
+    def stop_acquisition(self):
+        '''
+        Stop the digitiser acquisition.
+        '''
+        #self.dig.cmd.STOP() # This in reality looks like dig.cmd.DISARMACQUISITION()
+        self.collect = False
+        print("Digitiser acquisition stopped.")
+
+
+    def __del__(self):
+        '''
+        Destructor for the digitiser object.
+        '''
+        if self.collect:
+            self.stop_acquisition()
+        if hasattr(self, 'dig'):
+            self.dig.close()
