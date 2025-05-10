@@ -34,7 +34,8 @@ class Digitiser():
             #raise ValueError("Invalid digitiser generation specified in the configuration.")
         
         self.URI = self.generate_uri()
-        self.collect = False
+        self.isAcquiring = False
+        self.isConnected = False
 
     def generate_uri(self):
         '''
@@ -69,8 +70,7 @@ class Digitiser():
         try:
             self.dig = device.connnect(self.URI)
             self.dig.cmd.RESET()
-            logging.info(f'Connected to digitiser {self.dig_name} at {self.URI}.')
-
+            self.isConnected = True
             # extract relevant information from the digitiser
             self.dig_info = {
                 'n_ch'        : int(self.dig.par.NUMCH.value),
@@ -78,12 +78,16 @@ class Digitiser():
                 'ADCs'        : int(self.dig.par.ADC_NBITS.value),
                 'firmware'    : dig.par.FWTYPE.value,
             }
+            logging.info(f'Digitiser connected.\n{self.dig_info}')
         except Exception as e:
             logging.error(f"Failed to connect to digitiser.")
+            self.dig = None
+            return None
             #raise ConnectionError(f"Failed to connect to the digitiser.\n{e}")
         finally:
-            # close the connection
-            self.dig.close()
+            # close the connection if it exists
+            if self.dig is not None:
+                self.dig.close()
 
 
     def configure(self, 
@@ -110,7 +114,7 @@ class Digitiser():
         '''
         Start the digitiser acquisition.
         '''
-        self.collect = True
+        self.isAcquiring = True
         #try:
             #self.dig.cmd.START()
             #self.collect = True    
@@ -125,7 +129,7 @@ class Digitiser():
         Stop the digitiser acquisition.
         '''
         #self.dig.cmd.STOP() # This in reality looks like dig.cmd.DISARMACQUISITION()
-        self.collect = False
+        self.isAcquiring = False
         logging.info("Digitiser acquisition stopped.")
 
 
@@ -133,7 +137,8 @@ class Digitiser():
         '''
         Destructor for the digitiser object.
         '''
-        if self.collect:
+        if self.isAcquiring:
             self.stop_acquisition()
-        if hasattr(self, 'dig'):
+        if hasattr(self, 'dig') and self.dig is not None:
+            logging.info("Closing digitiser connection.")
             self.dig.close()

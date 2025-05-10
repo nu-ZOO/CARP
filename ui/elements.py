@@ -23,6 +23,8 @@ class config_files(QGroupBox):
     def __init__(self, controller, parent=None):
         super().__init__("Configuration Files", parent = parent)
 
+        self.controller = controller
+
         self.dig_conf = QPushButton("Digitiser Config")
         self.rec_conf = QPushButton("Recording Config")
 
