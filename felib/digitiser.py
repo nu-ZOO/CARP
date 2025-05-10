@@ -19,6 +19,10 @@ class Digitiser():
         self.dig_name = dig_dict.get('dig_name')
         self.dig_gen = int(dig_dict.get('dig_gen'))
 
+        # check for debugger
+        if self.dig_name == 'debug':
+            logging.debug('Debugging mode enabled. Digitiser will fake connection')
+
         if self.dig_gen == 1:
             self.con_type = dig_dict.get('con_type')
             self.link_num = int(dig_dict.get('link_num', 0))
@@ -67,6 +71,21 @@ class Digitiser():
         Connect to the digitiser using the generated URI.
         '''
         
+        logging.info(f'Attemping connection to digitiser {self.dig_name} at {self.URI}.')
+        
+        # fake connection for debugging
+        if self.dig_name == 'debug':
+            self.dig = None
+            self.isConnected = True
+            self.dig_info = {
+                'n_ch'        : 4,
+                'sample_rate' : 1000,
+                'ADCs'        : 12,
+                'firmware'    : 'debug',
+            }
+            logging.info(f'Digitiser connected in debug mode.\n{self.dig_info}')
+            return None
+
         try:
             self.dig = device.connnect(self.URI)
             self.dig.cmd.RESET()
@@ -109,6 +128,7 @@ class Digitiser():
         except Exception as e:
             logging.error(f"Failed to calibrate digitiser.\n{e}")
             #raise RuntimeError(f"Failed to calibrate digitiser.\n{e}")
+
 
     def start_acquisition(self):
         '''
