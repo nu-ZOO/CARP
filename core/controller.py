@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 #from caen_felib import lib, device, error
 from typing import Optional
 
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer
 
 from core.io import read_config_file
+from core.logging import setup_logging
 from felib.digitiser import Digitiser
 from ui import oscilloscope
 
@@ -28,6 +30,9 @@ class Controller:
         '''
         Initialise controller for GUI and digitiser
         '''
+
+        # Initialise logging
+        setup_logging()
 
         # gui first
         self.app = QApplication([])
@@ -44,7 +49,7 @@ class Controller:
         self.rec_config = rec_config
 
         if dig_config is None:
-            print("No digitiser configuration file provided. Digitiser will not be connected.")
+            logging.warning("No digitiser configuration file provided. Digitiser will not be connected.")
             self.digitiser = None
         else:
             self.digitiser = self.connect_digitiser()
@@ -72,7 +77,8 @@ class Controller:
         dig_dict = read_config_file(self.dig_config)
         
         if dig_dict is None:
-            raise ValueError("Digitiser configuration file not found or invalid.")
+            logging.error("Digitiser configuration file not found or invalid.")
+            #raise ValueError("Digitiser configuration file not found or invalid.")
         else:
             self.digitiser = Digitiser(dig_dict)
             self.digitiser.connect()

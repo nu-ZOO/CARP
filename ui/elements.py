@@ -4,7 +4,7 @@ jwaiton 05/25
 Different UI elements for the application.
 '''
 import random
-
+import logging
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -44,17 +44,17 @@ class config_files(QGroupBox):
         options |= QFileDialog.ReadOnly
         file_name, _ = QFileDialog.getOpenFileName(self, "Select Configuration File", "", "Conf Files (*.conf);;All Files (*)", options=options)
         if file_name:
-            print(f"Selected {conf_type} configuration file: {file_name}")
+            logging.info(f"Selected {conf_type} configuration file: {file_name}")
             # save config file to controller dig_config and rec_config
             if conf_type == 'dig':
                 self.dig_config = file_name
             elif conf_type == 'rec':
                 self.rec_config = file_name
             else:
-                print("Invalid configuration file type selected.")
+                logging.error("Invalid configuration file type selected.")
                 return
         else:
-            print("No file selected.")
+            logging.warning("No file selected.")
             return
 
 class StatsBox(QGroupBox):
@@ -93,13 +93,13 @@ class ConnectDigitiser(QGroupBox):
         self.con.clicked.connect(self.controller.connect_digitiser)
     
     def reset_connection(self):
-        print('Resetting connection...')
+        logging.info('Resetting connection...')
         #self.combobox_ports.clear()
         # here instead add the digitiser type connected, num channels perhaps
         # for now, just add some random ports
         #self.combobox_ports.addItems([f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}"])
     
     def connect(self):
-        print(f'Attempting connection to {self.controller}...')
+        logging.info(f'Attempting connection to {self.controller}...')
         # if not connected, try to connect.
         self.controller.connect_digitiser()

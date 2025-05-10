@@ -2,6 +2,7 @@ import pandas as pd
 
 import ast
 import configparser
+import logging
 
 
 
@@ -29,7 +30,7 @@ def read_config_file(file_path  :  str) -> dict:
         # read in arguments, require the required ones
         config.read(file_path)
     except TypeError as e:
-        print(f"Error reading config file: {e}")
+        logging.error(f"Error reading config file: {e}")
         return None
     
     arg_dict = {}

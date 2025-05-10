@@ -3,7 +3,7 @@ jwaiton 05/25
 
 Class(es) to handle the digitiser connection and acquisition.
 '''
-
+import logging
 from typing import Optional
 
 from felib.dig1_utils import generate_digitiser_uri
@@ -27,9 +27,11 @@ class Digitiser():
             self.dig_authority = dig_dict.get('dig_authority', 'caen.internal')
         elif self.dig_gen == 2:
             # not implemented yet, raise error
-            raise NotImplementedError("Digitiser generation 2 not implemented yet.")
+            logging.error("Digitiser generation 2 not implemented yet.")
+            #raise NotImplementedError("Digitiser generation 2 not implemented yet.")
         else:
-            raise ValueError("Invalid digitiser generation specified in the configuration.")
+            logging.error("Invalid digitiser generation specified in the configuration.")
+            #raise ValueError("Invalid digitiser generation specified in the configuration.")
         
         self.URI = self.generate_uri()
         self.collect = False
@@ -52,9 +54,11 @@ class Digitiser():
         elif self.dig_gen == 2:
             # not implemented yet, raise error
             # you should never reach this code
-            raise NotImplementedError("Digitiser generation 2 not implemented yet.")
+            logging.error("Digitiser generation 2 not implemented yet.")
+            #raise NotImplementedError("Digitiser generation 2 not implemented yet.")
         else:
-            raise ValueError("Invalid digitiser generation specified in the configuration.")
+            logging.error("Invalid digitiser generation specified in the configuration.")
+            #raise ValueError("Invalid digitiser generation specified in the configuration.")
         
 
     def connect(self):
@@ -65,7 +69,7 @@ class Digitiser():
         try:
             self.dig = device.connnect(self.URI)
             self.dig.cmd.RESET()
-            print(f'Connected to digitiser {self.dig_name} at {self.URI}.')
+            logging.info(f'Connected to digitiser {self.dig_name} at {self.URI}.')
 
             # extract relevant information from the digitiser
             self.dig_info = {
@@ -75,7 +79,8 @@ class Digitiser():
                 'firmware'    : dig.par.FWTYPE.value,
             }
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to the digitiser.\n{e}")
+            logging.error(f"Failed to connect to digitiser.")
+            #raise ConnectionError(f"Failed to connect to the digitiser.\n{e}")
         finally:
             # close the connection
             self.dig.close()
@@ -92,13 +97,14 @@ class Digitiser():
         self.dig.par.RECORDLENGTHT.value = f'{record_length}'
         self.dig.par.PRETRIGGERT.value = f'{pre_trigger}'
         self.dig.par.ACQTRIGGERSOURCE.value = trigger_level
-        print(f"Digitiser configured with record length {record_length}, pre-trigger {pre_trigger}, trigger level {trigger_level}.")
+        logging.info(f"Digitiser configured with record length {record_length}, pre-trigger {pre_trigger}, trigger level {trigger_level}.")
 
         try:
             self.dig.cmd.CALIBRATEADC()
-            print("Digitiser calibrated.")
+            logging.info("Digitiser calibrated.")
         except Exception as e:
-            raise RuntimeError(f"Failed to calibrate digitiser.\n{e}")
+            logging.error(f"Failed to calibrate digitiser.\n{e}")
+            #raise RuntimeError(f"Failed to calibrate digitiser.\n{e}")
 
     def start_acquisition(self):
         '''
@@ -120,7 +126,7 @@ class Digitiser():
         '''
         #self.dig.cmd.STOP() # This in reality looks like dig.cmd.DISARMACQUISITION()
         self.collect = False
-        print("Digitiser acquisition stopped.")
+        logging.info("Digitiser acquisition stopped.")
 
 
     def __del__(self):
