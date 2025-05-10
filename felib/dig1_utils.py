@@ -3,7 +3,7 @@ import numpy as np
 from typing import Optional
 from core.io import read_config_file
 
-def generate_digitiser_uri(dig_gen           :  str,
+def generate_digitiser_uri(dig_gen           :  int,
                            con_type          :  str,
                            link_num          :  Optional[int] = 0,
                            conet_node        :  Optional[int] = 0,
@@ -16,7 +16,7 @@ def generate_digitiser_uri(dig_gen           :  str,
     Parameters:
     ----------
 
-        dig_gen (str)           :  The digitiser generation (1 or 2)
+        dig_gen (int)           :  The digitiser generation (1 or 2)
         con_type (str)          :  The connection type (e.g., 'USB', 'VME', 'CONET')
         link_num (int)          :  The link number for the connection
         conet_node (int)        :  The CONET node number (default is 0)
@@ -27,6 +27,9 @@ def generate_digitiser_uri(dig_gen           :  str,
     -------
         str: A URI string representing the digitiser connection.
     """
+    dig_scheme = f'dig{dig_gen}'
+    dig_path   = f'{con_type}'
+    dig_query = f'link_num={link_num}&conet_node={conet_node}&vme_base_address={vme_base_address}'
 
     return f'{dig_scheme}://{dig_authority}/{dig_path}?{dig_query}'
 
