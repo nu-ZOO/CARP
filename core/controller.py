@@ -34,17 +34,8 @@ class Controller:
         # Initialise logging
         setup_logging()
 
-        # gui first
-        self.app = QApplication([])
-        self.main_window = oscilloscope.MainWindow(controller = self)
 
-        self.fps_timer  = QTimer()
-        self.fps_timer.timeout.connect(self.update_fps)
-        self.spf = 1 # seconds per frame
-
-
-        # digitiser connection second
-
+        # digitiser connection first
         self.dig_config = dig_config
         self.rec_config = rec_config
 
@@ -53,6 +44,25 @@ class Controller:
             self.digitiser = None
         else:
             self.digitiser = self.connect_digitiser()
+
+        # check digitiser connection, if valid set isConnected to True
+        if self.digitiser is not None:
+            self.digitiser.isConnected = True
+            logging.info(f"Digitiser connected: {self.digitiser.URI}")
+        else:
+            logging.warning("Digitiser not connected.")
+
+
+        # gui second
+        self.app = QApplication([])
+        self.main_window = oscilloscope.MainWindow(controller = self)
+
+        self.fps_timer  = QTimer()
+        self.fps_timer.timeout.connect(self.update_fps)
+        self.spf = 1 # seconds per frame
+
+
+
 
 
     def update_fps(self):
