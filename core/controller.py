@@ -92,4 +92,5 @@ class Controller:
         else:
             self.digitiser = Digitiser(dig_dict)
             self.digitiser.connect()
+            self.main_window.control_panel.acquisition.update()
 

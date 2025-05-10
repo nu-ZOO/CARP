@@ -37,7 +37,7 @@ class ControlPanel(QFrame):
 
         self.connect_digitiser = elements.ConnectDigitiser(self.controller)
         self.stats_box         = elements.StatsBox()
-        self.conf_files        = elements.config_files()
+        self.conf_files        = elements.config_files(self.controller)
         self.acquisition       = elements.Acquisition(self.controller)
 
         self.layout = QVBoxLayout()

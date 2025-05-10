@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 class config_files(QGroupBox):
-    def __init__(self, parent=None):
+    def __init__(self, controller, parent=None):
         super().__init__("Configuration Files", parent = parent)
 
         self.dig_conf = QPushButton("Digitiser Config")
@@ -47,9 +47,9 @@ class config_files(QGroupBox):
             logging.info(f"Selected {conf_type} configuration file: {file_name}")
             # save config file to controller dig_config and rec_config
             if conf_type == 'dig':
-                self.dig_config = file_name
+                self.controller.dig_config = file_name
             elif conf_type == 'rec':
-                self.rec_config = file_name
+                self.controller.rec_config = file_name
             else:
                 logging.error("Invalid configuration file type selected.")
                 return
@@ -117,30 +117,40 @@ class Acquisition(QGroupBox):
         
 
         self.start_stop = QPushButton("Start")
-        self.start_stop.setStyleSheet("background-color: green; color: black")
+        
 
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         layout.addWidget(self.start_stop)
 
-        self.isAcquiring = False
-        self.start_stop.clicked.connect(self.toggle_acquisition)
+        # update button based on digitiser state
+        self.update()
     
 
+    def update(self):
+        '''
+        Update the acquisition status based on the digitiser state.
+        '''
+        if self.controller.digitiser is None:
+            self.start_stop.setStyleSheet("background-color: grey; color: black")
+        else:
+            self.start_stop.setStyleSheet("background-color: green; color: black")
+            self.start_stop.clicked.connect(self.toggle_acquisition)
+        
+
     def toggle_acquisition(self):
-        if self.isAcquiring:
+        if self.controller.digitiser.isAcquiring:
             logging.info('Stopping acquisition...')
             self.start_stop.setText("Start")
             self.start_stop.setStyleSheet("background-color: green; color: black")
-            self.isAcquiring = False
             # stop the acquisition
-            # self.controller.stop_acquisition()
+            self.controller.digitiser.stop_acquisition()
         else:
             logging.info('Starting acquisition...')
             self.start_stop.setText("Stop")
             self.start_stop.setStyleSheet("background-color: red; color: white")
-            self.isAcquiring = True
+            self.controller.digitiser.isAcquiring = True
             # start the acquisition
-            # self.controller.start_acquisition()
+            self.controller.digitiser.start_acquisition()
     
