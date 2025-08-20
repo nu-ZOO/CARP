@@ -92,5 +92,9 @@ class Controller:
         else:
             self.digitiser = Digitiser(dig_dict)
             self.digitiser.connect()
-            self.main_window.control_panel.acquisition.update()
+            # Only add to the main window if it exists
+            if hasattr(self, 'main_window'):
+                self.main_window.control_panel.acquisition.update()
+                
+            
 
