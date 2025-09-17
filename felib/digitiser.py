@@ -101,7 +101,7 @@ class Digitiser():
             }
             logging.info(f'Digitiser connected.\n{self.dig_info}')
         except Exception as e:
-            logging.error(f"Failed to connect to digitiser.")
+            logging.exception(f"Failed to connect to digitiser.")
             self.dig = None
             return None
             #raise ConnectionError(f"Failed to connect to the digitiser.\n{e}")
@@ -144,14 +144,14 @@ class Digitiser():
                 self.dig.par.WAVEFORMS.value = 'TRUE'
             logging.info(f"Digitiser configured with record length {self.record_length}, pre-trigger {self.pre_trigger}, trigger level {self.triggerlevel}.")
         except Exception as e:
-            logging.error(f"Failed to configure recording parameters.\n{e}")
+            logging.exception(f"Failed to configure recording parameters.\n{e}")
 
 
         try:
             self.dig.cmd.CALIBRATEADC()
             logging.info("Digitiser calibrated.")
         except Exception as e:
-            logging.error(f"Failed to calibrate digitiser.\n{e}")
+            logging.exception(f"Failed to calibrate digitiser.\n{e}")
             #raise RuntimeError(f"Failed to calibrate digitiser.\n{e}")
 
 
