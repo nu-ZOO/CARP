@@ -168,6 +168,13 @@ class Digitiser():
         Start the digitiser acquisition.
         '''
         self.isAcquiring = True
+        try:
+            self.dig.cmd.ARMACQUISITION()
+        except Exception as e:
+            logging.exception("Starting acquisition failed:")
+        
+        # start recording function
+        self.trigger_and_record()
         #try:
             #self.dig.cmd.START()
             #self.collect = True    
