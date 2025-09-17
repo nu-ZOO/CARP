@@ -144,6 +144,8 @@ class Digitiser():
             if self.dig.par.FWTYPE == 'DPP-PSD':
                 self.dig.par.WAVEFORMS.value = 'TRUE'
                 self.data_format = formats.DPP
+                # setting up probe types (READ UP ON THIS)
+                self.dig.vtrace[0].par.VTRACE_PROBE.value = 'VPROBE_INPUT'
             
             endpoint_path = (self.dig.par.FWTYPE.value).replace('-', '')
             self.endpoint = self.dig.endpoint[endpoint_path]
