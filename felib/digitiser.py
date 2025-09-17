@@ -109,18 +109,41 @@ class Digitiser():
                 self.dig.close()
 
 
-    def configure(self, 
-                  record_length: Optional[int] = 0,
-                  pre_trigger: Optional[int] = 0,
-                  trigger_level: Optional[str] = 'SWTRG'):
+    def configure(self, rec_dict : dict):
+                  #record_length: Optional[int] = 0,
+                  #pre_trigger: Optional[int] = 0,
+                  #trigger_level: Optional[str] = 'SWTRG'):
         '''
         Configure the digitiser with the provided settings and calibrate it.
         '''        
 
-        self.dig.par.RECORDLENGTHT.value = f'{record_length}'
-        self.dig.par.PRETRIGGERT.value = f'{pre_trigger}'
-        self.dig.par.ACQTRIGGERSOURCE.value = trigger_level
-        logging.info(f"Digitiser configured with record length {record_length}, pre-trigger {pre_trigger}, trigger level {trigger_level}.")
+        self.record_length = rec_dict.get('record_length')
+        self.pre_trigger   = rec_dict.get('pre_trigger')
+        self.trigger_mode  = rec_dict.get('trigger_mode')
+
+        try:
+
+            self.dig.par.RECLEN.value = f'{self.record_length}'
+
+            if self.trigger_mode == 'SWTRIG':
+                self.dig.par.TRG_SW_ENABLE.value = 'TRUE'
+                self.dig.par.STARTMODE.value = 'START_MODE_SW'
+
+            # configure channels
+            for i, ch in enumerate(self.dig.ch):
+                ch.par.CH_ENABLED.value = 'TRUE' if i == 0 else 'FALSE' # only channel 0 atm
+                ch.par.CH_PRETRG.value = f'{self.pre_trigger}'
+
+            #self.dig.par.PRETRIGGERT.value = f'{self.pre_trigger}'
+            #self.dig.par.ACQTRIGGERSOURCE.value = self.triggerlevel
+
+            # if DPP, need to specify that you're looking at waveforms specifically.
+            if self.dig.par.FWTYPE == 'DPP':
+                self.dig.par.WAVEFORMS.value = 'TRUE'
+            logging.info(f"Digitiser configured with record length {self.record_length}, pre-trigger {self.pre_trigger}, trigger level {self.triggerlevel}.")
+        except Exception as e:
+            logging.error(f"Failed to configure recording parameters.\n{e}")
+
 
         try:
             self.dig.cmd.CALIBRATEADC()

@@ -85,6 +85,7 @@ class Controller:
 
         # Load in configs
         dig_dict = read_config_file(self.dig_config)
+        rec_dict = read_config_file(self.rec_config)
         
         if dig_dict is None:
             logging.error("Digitiser configuration file not found or invalid.")
@@ -95,6 +96,12 @@ class Controller:
             # Only add to the main window if it exists
             if hasattr(self, 'main_window'):
                 self.main_window.control_panel.acquisition.update()
-                
+
+        # once connected, configure recording setup
+        if rec_dict is None:
+            logging.warning("No recording configuration file provided.")
+        else:
+            if (self.digitiser is not None) and self.digitiser.isConnected:
+                self.digitiser.configure(rec_dict)                
             
 
