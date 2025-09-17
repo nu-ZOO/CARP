@@ -104,12 +104,6 @@ class Digitiser():
             logging.exception(f"Failed to connect to digitiser.")
             self.dig = None
             return None
-            #raise ConnectionError(f"Failed to connect to the digitiser.\n{e}")
-        finally:
-            # close the connection if it exists
-            if self.dig is not None:
-                logging.info(f'Closing connection to digitiser\n{dig}')
-                self.dig.close()
 
 
     def configure(self, rec_dict : dict):
