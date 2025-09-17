@@ -93,9 +93,9 @@ class Digitiser():
             # extract relevant information from the digitiser
             self.dig_info = {
                 'n_ch'        : int(self.dig.par.NUMCH.value),
-                'sample_rate' : int(self.dig.par.SAMPLERATE.value),
-                'ADCs'        : int(self.dig.par.ADC_NBITS.value),
-                'firmware'    : dig.par.FWTYPE.value,
+                'sample_rate' : int(self.dig.par.ADC_SAMPLRATE.value),
+                'ADCs'        : int(self.dig.par.ADC_NBIT.value),
+                'firmware'    : self.dig.par.FWTYPE.value,
             }
             logging.info(f'Digitiser connected.\n{self.dig_info}')
         except Exception as e:
