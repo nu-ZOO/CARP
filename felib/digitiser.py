@@ -3,10 +3,13 @@ jwaiton 05/25
 
 Class(es) to handle the digitiser connection and acquisition.
 '''
+import numpy as np
 import logging
 from typing import Optional
 
 from felib.dig1_utils import generate_digitiser_uri
+
+import felib.formats as formats
 
 from caen_felib import lib, device, error
 
