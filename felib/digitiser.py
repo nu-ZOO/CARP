@@ -145,7 +145,7 @@ class Digitiser():
                 self.dig.par.WAVEFORMS.value = 'TRUE'
                 self.data_format = formats.DPP
             
-            endpoint_path = (self.dig.par.FWTYPE).replace('-', '')
+            endpoint_path = (self.dig.par.FWTYPE.value).replace('-', '')
             self.endpoint = self.dig.endpoint[endpoint_path]
             self.data = self.endpoint.set_read_data_format(self.data_format)
 
