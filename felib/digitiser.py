@@ -89,13 +89,13 @@ class Digitiser():
             return None
 
         try:
-            self.dig = device.connnect(self.URI)
+            self.dig = device.connect(self.URI)
             self.dig.cmd.RESET()
             self.isConnected = True
             # extract relevant information from the digitiser
             self.dig_info = {
                 'n_ch'        : int(self.dig.par.NUMCH.value),
-                'sample_rate' : int(self.dig.par.ADC_SAMPLRATE.value),
+                'sample_rate' : float(self.dig.par.ADC_SAMPLRATE.value),
                 'ADCs'        : int(self.dig.par.ADC_NBIT.value),
                 'firmware'    : self.dig.par.FWTYPE.value,
             }
