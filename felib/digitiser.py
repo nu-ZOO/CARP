@@ -45,6 +45,9 @@ class Digitiser():
         self.URI = self.generate_uri()
         self.isAcquiring = False
         self.isConnected = False
+        
+        self.data_format = []
+        self.endpoint = None
 
     def generate_uri(self):
         '''
@@ -140,7 +143,14 @@ class Digitiser():
             # if DPP, need to specify that you're looking at waveforms specifically.
             if self.dig.par.FWTYPE == 'DPP-PSD':
                 self.dig.par.WAVEFORMS.value = 'TRUE'
-            logging.info(f"Digitiser configured with record length {self.record_length}, pre-trigger {self.pre_trigger}, trigger mode {self.trigger_mode}.")
+                self.data_format = formats.DPP
+            
+            endpoint_path = (self.dig.par.FWTYPE).replace('-', '')
+            self.endpoint = self.dig.endpoint[endpoint_path]
+            self.data = self.endpoint.set_read_data_format(self.data_format)
+
+        
+            logging.info(f"Digitiser configured:\nrecord length {self.record_length}, pre-trigger {self.pre_trigger}, trigger mode {self.trigger_mode}.")
         except Exception as e:
             logging.exception(f"Failed to configure recording parameters.\n{e}")
 
