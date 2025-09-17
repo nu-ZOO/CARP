@@ -8,6 +8,8 @@ from typing import Optional
 
 from felib.dig1_utils import generate_digitiser_uri
 
+from caen_felib import lib, device, error
+
 
 class Digitiser():
     def __init__(self, dig_dict : dict):
