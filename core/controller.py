@@ -91,8 +91,8 @@ class Controller:
             logging.error("Digitiser configuration file not found or invalid.")
             #raise ValueError("Digitiser configuration file not found or invalid.")
         else:
-            self.digitiser = Digitiser(dig_dict)
-            self.digitiser.connect()
+            digitiser = Digitiser(dig_dict)
+            digitiser.connect()
             # Only add to the main window if it exists
             if hasattr(self, 'main_window'):
                 self.main_window.control_panel.acquisition.update()
@@ -101,7 +101,8 @@ class Controller:
         if rec_dict is None:
             logging.warning("No recording configuration file provided.")
         else:
-            if (self.digitiser is not None) and self.digitiser.isConnected:
-                self.digitiser.configure(rec_dict)                
+            if (digitiser is not None) and digitiser.isConnected:
+                digitiser.configure(rec_dict)
+        return digitiser              
             
 
