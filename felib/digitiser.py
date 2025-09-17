@@ -108,6 +108,7 @@ class Digitiser():
         finally:
             # close the connection if it exists
             if self.dig is not None:
+                logging.info(f'Closing connection to digitiser\n{dig}')
                 self.dig.close()
 
 
@@ -142,7 +143,7 @@ class Digitiser():
             # if DPP, need to specify that you're looking at waveforms specifically.
             if self.dig.par.FWTYPE == 'DPP':
                 self.dig.par.WAVEFORMS.value = 'TRUE'
-            logging.info(f"Digitiser configured with record length {self.record_length}, pre-trigger {self.pre_trigger}, trigger level {self.triggerlevel}.")
+            logging.info(f"Digitiser configured with record length {self.record_length}, pre-trigger {self.pre_trigger}, trigger mode {self.trigger_mode}.")
         except Exception as e:
             logging.exception(f"Failed to configure recording parameters.\n{e}")
 
