@@ -154,5 +154,6 @@ class Acquisition(QGroupBox):
             self.start_stop.setStyleSheet("background-color: red; color: white")
             self.controller.digitiser.isAcquiring = True
             # start the acquisition
-            self.controller.digitiser.start_acquisition()
+            self.controller.start_acquisition()
+            
     
