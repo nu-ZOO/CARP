@@ -128,7 +128,7 @@ class Controller:
         '''
         if self.digitiser.isAcquiring:
             evt_cnt = 0
-            match self.trigger_mode:
+            match self.digitiser.trigger_mode:
                 case 'SWTRIG':
                     self.SW_record()
                 case _:
@@ -148,8 +148,8 @@ class Controller:
             self.digitiser.dig.cmd.SENDSWTRIGGER()
 
             try:
-                self.endpoint.read_data(100, self.data) # timeout first number in ms
-            except error.ERROR as ex:
+                self.digitiser.endpoint.read_data(100, self.digitiser.data) # timeout first number in ms
+            except error.Error as ex:
                 logging.exception("Error in readout:")
                 if ex.code is error.ErrorCode.TIMEOUT:
                     continue
@@ -160,11 +160,11 @@ class Controller:
             # ensure the input and trigger are acceptable (I think?)
             #assert self.data[3].value == 1 # VPROBE INPUT? I need to understand this
             #assert self.data[6].value == 1 # VPROBE TRIGGER?
-            waveform_size = self.data[7].value
+            waveform_size = self.digitiser.data[7].value
             valid_sample_range = np.arange(0, waveform_size, dtype = waveform_size.dtype)
 
             # increase the event counter
             evt_counter += 1
 
             if (evt_counter % 100) == 0:
-                self.main_window.screen.update_ch(valid_sample_range, (self.data[3].value))
+                self.main_window.screen.update_ch(valid_sample_range, (self.digitiser.data[3].value))
