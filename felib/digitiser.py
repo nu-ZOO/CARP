@@ -233,7 +233,6 @@ class Digitiser():
             assert self.data[6].value == 1 # VPROBE TRIGGER?
             waveform_size = self.data[7].value
             valid_sample_range = np.arange(0, waveform_size, dtype = waveform_size.dtype)
-            self.main_window.screen.plot_ch(valid_sample_range, (self.data[3].value))
 
     def __del__(self):
         '''
