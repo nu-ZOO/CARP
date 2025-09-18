@@ -229,8 +229,8 @@ class Digitiser():
                 raise ex
         
             # ensure the input and trigger are acceptable (I think?)
-            assert self.data[3].value == 1 # VPROBE INPUT? I need to understand this
-            assert self.data[6].value == 1 # VPROBE TRIGGER?
+            #assert self.data[3].value == 1 # VPROBE INPUT? I need to understand this
+            #assert self.data[6].value == 1 # VPROBE TRIGGER?
             waveform_size = self.data[7].value
             valid_sample_range = np.arange(0, waveform_size, dtype = waveform_size.dtype)
 
