@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QApplication
 )
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QWaitCondition, QMutex, Signal, QThread, QObject
 
 from caen_felib import lib, device, error
 
@@ -64,7 +64,33 @@ class Controller:
         self.spf = 1 # seconds per frame
 
 
+        # worker third
+        if self.digitiser is not None and self.digitiser.isConnected:
+            self.initialise_worker()
 
+    def initialise_worker(self):
+        '''
+        Initialise the worker thread.
+        This in turn should begin the data collection (I think?)
+        '''
+
+        # create thread to manage data output
+        self.worker_wait_condition = QWaitCondition()
+        self.acquisition_worker    = AcquisitionWorker(self.worker_wait_condition, digitser = self.digitiser)
+        self.acquisition_thread    = QThread()
+        self.acquisition_worker.moveToThread(self.acquisition_thread)
+        self.acquisition_thread.started.connect(self.acquisition_worker.run)
+        self.acquisition_worker.data_ready.connect(self.data_handling)
+        #self.acquisition_thread.start()
+
+
+    def data_handling(self):
+        # visualise (and at some point, collect in a file)
+        wf_size, ADCs = self.data
+        self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
+        # prep the next thread
+        if self.digitiser.isAcquiring:
+            self.worker_wait_condition.notify_one()
 
 
     def update_fps(self):
@@ -116,10 +142,18 @@ class Controller:
             - Initialise the data reader,
             - Initialise the output visuals.
         '''
-
-        self.digitiser.start_acquisition()
-        self.trigger_and_record()
+        try:
+            self.acquisition_thread.start()
+        except Exception as e:
+            logging.exception('Failed to start acquisition.')
+        #self.digitiser.start_acquisition()
+        #self.trigger_and_record()
         
+    def stop_acquisition(self):
+        '''
+        Simple stopping of acquisition, this will end the AcquisitionWorkers loop and terminate
+        '''
+        self.digitiser.isAcquiring = False
 
     def trigger_and_record(self):
         '''
@@ -168,3 +202,40 @@ class Controller:
 
             if (evt_counter % 100) == 0:
                 self.main_window.screen.update_ch(valid_sample_range, (self.digitiser.data[3].value))
+
+
+
+class AcquisitionWorker(QObject):
+
+    data_ready = Signal()
+
+    def __init__(self, wait_condition, digitiser, parent=None):
+        super().__init__(parent=parent)
+        self.wait_condition = wait_condition
+        self.digitiser = digitiser
+        self.mutex = QMutex()
+        # ensure on initial startup that you're not acquiring.
+        self.digitiser.isAcquiring = False
+
+    
+    def run(self):
+
+        self.digitiser.start_acquisition()
+        
+        while self.digitiser.isAcquiring:
+            self.mutex.lock()
+            self.wait_condition.wait(self.mutex)
+            self.mutex.unlock()
+            
+            # redundant
+            if not self.digitiser.isAcquiring:
+                break
+
+            self.data = self.digitiser.acquire()
+            self.data_ready.emit()
+        
+        self.stop()
+
+    def stop(self):
+        self.digitiser.stop_acquisition()
+        self.wait_condition.wakeAll()
