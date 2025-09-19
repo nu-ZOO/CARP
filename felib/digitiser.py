@@ -176,7 +176,7 @@ class Digitiser():
             logging.exception("Starting acquisition failed:")
         
         # start recording function
-        self.trigger_and_record()
+        #self.trigger_and_record()
         #try:
             #self.dig.cmd.START()
             #self.collect = True    
@@ -213,27 +213,40 @@ class Digitiser():
                     logging.info(f'Trigger mode {self.trigger_mode} not currently implemented.')
                     self.stop_acquisition()    
 
+    def acquire(self):
+        match self.trigger_mode:
+            case 'SWTRIG':
+                return self.SW_record()
+            case _:
+                logging.info(f'Trigger mode {self.trigger_mode} not currently implemented.')
+                self.stop_acquisition()    
+
 
     def SW_record(self):
-        for _ in range(1000):
-            self.dig.cmd.SENDSWTRIGGER()
-
-            try:
-                self.endpoint.read_data(100, self.data) # timeout first number in ms
-            except error.ERROR as ex:
-                logging.exception("Error in readout:")
-                if ex.code is error.ErrorCode.TIMEOUT:
-                    continue
-                if ex.code is error.ErrorCode.STOP:
-                    break
+        '''
+        Send software trigger and read the data out.
+        '''
+        self.dig.cmd.SENDSWTRIGGER()
+        try:
+            self.endpoint.read_data(100, self.data) # timeout first number in ms
+            return (self.data[7].value, self.data[3].value)
+        except error.ERROR as ex:
+            logging.exception("Error in readout:")
+            if ex.code is error.ErrorCode.TIMEOUT:
+                logging.error("TIMEOUT")
+            if ex.code is error.ErrorCode.STOP:
+                logging.exception("STOP")
                 raise ex
         
-            # ensure the input and trigger are acceptable (I think?)
-            #assert self.data[3].value == 1 # VPROBE INPUT? I need to understand this
-            #assert self.data[6].value == 1 # VPROBE TRIGGER?
-            waveform_size = self.data[7].value
-            valid_sample_range = np.arange(0, waveform_size, dtype = waveform_size.dtype)
+        # ensure the input and trigger are acceptable (I think?)
+        #assert self.data[3].value == 1 # VPROBE INPUT? I need to understand this
+        #assert self.data[6].value == 1 # VPROBE TRIGGER?
+        
+        #waveform_size = self.data[7].value
+        #valid_sample_range = np.arange(0, waveform_size, dtype = waveform_size.dtype)
 
+        
+    
     def __del__(self):
         '''
         Destructor for the digitiser object.
