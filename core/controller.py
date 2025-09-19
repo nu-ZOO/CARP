@@ -143,7 +143,8 @@ class Controller:
             - Initialise the output visuals.
         '''
         try:
-            self.acquisition_thread.start()
+            self.digitiser.start_acquisition()
+            self.worker_wait_condition.wakeAll()
         except Exception as e:
             logging.exception('Failed to start acquisition.')
         #self.digitiser.start_acquisition()
@@ -220,7 +221,7 @@ class AcquisitionWorker(QObject):
     
     def run(self):
 
-        self.digitiser.start_acquisition()
+        
         
         while True:
             self.mutex.lock()
@@ -228,7 +229,7 @@ class AcquisitionWorker(QObject):
                 self.wait_condition.wait(self.mutex)
             self.mutex.unlock()
             
-
+            
             self.data = self.digitiser.acquire()
             self.data_ready.emit()
         
