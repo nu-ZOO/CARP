@@ -101,7 +101,7 @@ class Digitiser():
             # extract relevant information from the digitiser
             self.dig_info = {
                 'n_ch'        : int(self.dig.par.NUMCH.value),
-                'sample_rate' : float(self.dig.par.ADC_SAMPLRATE.value),
+                'sample_rate' : float(self.dig.par.ADC_SAMPLRATE.value), # Msps
                 'ADCs'        : int(self.dig.par.ADC_NBIT.value),
                 'firmware'    : self.dig.par.FWTYPE.value,
             }
@@ -140,10 +140,14 @@ class Digitiser():
             #self.dig.par.PRETRIGGERT.value = f'{self.pre_trigger}'
             #self.dig.par.ACQTRIGGERSOURCE.value = self.triggerlevel
 
+            # calculate the true reclen value for outputting
+            reclen_ns = int(self.dig.par.RECLEN.value)
+            self.reclen    = int(reclen_ns / int(1e3 / self.dig_info['sample_rate']))
+
             # if DPP, need to specify that you're looking at waveforms specifically.
             if self.dig.par.FWTYPE.value == 'DPP-PSD':
                 self.dig.par.WAVEFORMS.value = 'TRUE'
-                self.data_format = formats.DPP(int(self.dig.par.NUMCH.value), int(self.dig.par.RECLEN.value))
+                self.data_format = formats.DPP(int(self.dig.par.NUMCH.value), int(self.reclen))
                 # setting up probe types (READ UP ON THIS)
                 self.dig.vtrace[0].par.VTRACE_PROBE.value = 'VPROBE_INPUT'
             
