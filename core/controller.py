@@ -76,7 +76,7 @@ class Controller:
 
         # create thread to manage data output
         self.worker_wait_condition = QWaitCondition()
-        self.acquisition_worker    = AcquisitionWorker(self.worker_wait_condition, digitser = self.digitiser)
+        self.acquisition_worker    = AcquisitionWorker(self.worker_wait_condition, digitiser = self.digitiser)
         self.acquisition_thread    = QThread()
         self.acquisition_worker.moveToThread(self.acquisition_thread)
         self.acquisition_thread.started.connect(self.acquisition_worker.run)
