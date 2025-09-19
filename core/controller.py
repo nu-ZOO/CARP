@@ -81,7 +81,7 @@ class Controller:
         self.acquisition_worker.moveToThread(self.acquisition_thread)
         self.acquisition_thread.started.connect(self.acquisition_worker.run)
         self.acquisition_worker.data_ready.connect(self.data_handling)
-        #self.acquisition_thread.start()
+        self.acquisition_thread.start()
 
 
     def data_handling(self):
@@ -216,20 +216,18 @@ class AcquisitionWorker(QObject):
         self.mutex = QMutex()
         # ensure on initial startup that you're not acquiring.
         self.digitiser.isAcquiring = False
-
+    
     
     def run(self):
 
         self.digitiser.start_acquisition()
         
-        while self.digitiser.isAcquiring:
+        while True:
             self.mutex.lock()
-            self.wait_condition.wait(self.mutex)
+            if not self.digitiser.isAcquiring:
+                self.wait_condition.wait(self.mutex)
             self.mutex.unlock()
             
-            # redundant
-            if not self.digitiser.isAcquiring:
-                break
 
             self.data = self.digitiser.acquire()
             self.data_ready.emit()
