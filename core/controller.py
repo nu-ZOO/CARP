@@ -34,9 +34,9 @@ class Controller:
         Initialise controller for GUI and digitiser
         '''
 
-        # Initialise logging
+        # Initialise logging and tracking
         setup_logging()
-
+        self.tracker = Tracker()
 
         # digitiser connection first
         self.dig_config = dig_config
@@ -89,6 +89,8 @@ class Controller:
         # visualise (and at some point, collect in a file)
         wf_size, ADCs = self.acquisition_worker.data
         self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
+        # ping the tracker (make this optional)
+        self.tracker.track()
         # prep the next thread
         if self.digitiser.isAcquiring:
             self.worker_wait_condition.notify_one()
