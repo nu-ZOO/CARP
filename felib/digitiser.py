@@ -234,7 +234,7 @@ class Digitiser():
         try:
             self.endpoint.read_data(100, self.data) # timeout first number in ms
             return (self.data[7].value, self.data[3].value)
-        except error.ERROR as ex:
+        except error.Error as ex:
             logging.exception("Error in readout:")
             if ex.code is error.ErrorCode.TIMEOUT:
                 logging.error("TIMEOUT")
