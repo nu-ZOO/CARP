@@ -90,7 +90,7 @@ class Controller:
         wf_size, ADCs = self.acquisition_worker.data
         self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
         # ping the tracker (make this optional)
-        self.tracker.track()
+        self.tracker.track(ADCs.nbytes)
         # prep the next thread
         if self.digitiser.isAcquiring:
             self.worker_wait_condition.notify_one()
