@@ -264,9 +264,9 @@ class Tracker:
         self.bytes_ps += nbytes
 
         t_check = time.perf_counter()
-        if t_check - self.last_report >= 1.0:
+        if t_check - self.last_time >= 1.0:
             MB = self.bytes_ps / 1000000
-            print(f'|| {self.events_ps} events/sec || {MB:.2f} MB/sec ||')
-            self.last_report = t_check
+            logging.info(f'|| {self.events_ps} events/sec || {MB:.2f} MB/sec ||')
+            self.last_time = t_check
             self.bytes_ps = 0
             self.events_ps = 0
