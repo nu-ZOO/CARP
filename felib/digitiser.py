@@ -45,6 +45,7 @@ class Digitiser():
         self.URI = self.generate_uri()
         self.isAcquiring = False
         self.isConnected = False
+        self.isRecording = False
         
         self.data_format = []
         self.endpoint = None
