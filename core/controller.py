@@ -88,9 +88,15 @@ class Controller:
     def data_handling(self):
         # visualise (and at some point, collect in a file)
         wf_size, ADCs = self.acquisition_worker.data
+
+        # save the data (PUT IT HERE)
+
+        # update visuals
         self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
+        
         # ping the tracker (make this optional)
         self.tracker.track(ADCs.nbytes)
+        
         # prep the next thread
         if self.digitiser.isAcquiring:
             self.worker_wait_condition.notify_one()

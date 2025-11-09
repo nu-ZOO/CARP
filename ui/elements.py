@@ -100,11 +100,6 @@ class ConnectDigitiser(QGroupBox):
         # here instead add the digitiser type connected, num channels perhaps
         # for now, just add some random ports
         #self.combobox_ports.addItems([f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}", f"Port {random.randint(0,10)}"])
-    
-    def connect(self):
-        logging.info(f'Attempting connection to {self.controller}...')
-        # if not connected, try to connect.
-        self.controller.connect_digitiser()
 
 
 class Acquisition(QGroupBox):
@@ -119,13 +114,14 @@ class Acquisition(QGroupBox):
         
 
         self.start_stop = QPushButton("Start")
+        self.record     = QPushButton("Record")
         
 
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         layout.addWidget(self.start_stop)
-
+        layout.addWidget(self.record)
         # update button based on digitiser state
         self.update()
     
@@ -136,9 +132,14 @@ class Acquisition(QGroupBox):
         '''
         if self.controller.digitiser is None:
             self.start_stop.setStyleSheet("background-color: grey; color: black")
+            self.record.setStyleSheet("background-color: grey; color: black")
         else:
+            # start stop
             self.start_stop.setStyleSheet("background-color: green; color: black")
             self.start_stop.clicked.connect(self.toggle_acquisition)
+            # recording...
+            self.record.setStyleSheet("background-color: red; color: black")
+            self.record.clicked.connect(self.toggle_recording)
         
 
     def toggle_acquisition(self):
@@ -156,4 +157,8 @@ class Acquisition(QGroupBox):
             # start the acquisition
             self.controller.start_acquisition()
             
-    
+    def toggle_recording(self):
+        '''
+        if digitiser exists, must force digitiser.isAcquiring
+        then enables digitiser.isRecording also
+        '''
