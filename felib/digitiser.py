@@ -113,7 +113,9 @@ class Digitiser():
             return None
 
 
-    def configure(self, rec_dict : dict):
+    def configure(self, 
+                  dig_dict : dict,
+                  rec_dict : dict):
                   #record_length: Optional[int] = 0,
                   #pre_trigger: Optional[int] = 0,
                   #trigger_level: Optional[str] = 'SWTRG'):

@@ -139,7 +139,7 @@ class Controller:
             logging.warning("No recording configuration file provided.")
         else:
             if (digitiser is not None) and digitiser.isConnected:
-                digitiser.configure(rec_dict)
+                digitiser.configure(dig_dict, rec_dict)
         return digitiser              
             
 
