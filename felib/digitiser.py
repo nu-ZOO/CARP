@@ -231,6 +231,8 @@ class Digitiser():
         match self.trigger_mode:
             case 'SWTRIG':
                 return self.SW_record()
+            case 'SELFTRIG':
+                return self.SELFTRIG_record()
             case _:
                 logging.info(f'Trigger mode {self.trigger_mode} not currently implemented.')
                 self.stop_acquisition()    
@@ -262,6 +264,23 @@ class Digitiser():
 
         
     
+    def SELFTRIG_record(self):
+        '''
+        Trigger on channels
+        '''
+        try:
+            self.endpoint.has_data(100)
+            self.endpoint.read_data(50, self.data)
+            return (self.data[7].value, self.data[3].value)
+        except error.Error as ex:
+            logging.exception("Error in readout:")
+            if ex.code is error.ErrorCode.TIMEOUT:
+                logging.error("TIMEOUT")
+            if ex.code is error.ErrorCode.STOP:
+                logging.exception("STOP")
+                raise ex
+
+
     def __del__(self):
         '''
         Destructor for the digitiser object.
