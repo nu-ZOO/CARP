@@ -233,7 +233,8 @@ class Digitiser():
         '''
         self.dig.cmd.SENDSWTRIGGER()
         try:
-            self.endpoint.read_data(100, self.data) # timeout first number in ms
+            self.endpoint.has_data(100)
+            self.endpoint.read_data(50, self.data) # timeout first number in ms
             return (self.data[7].value, self.data[3].value)
         except error.Error as ex:
             logging.exception("Error in readout:")
