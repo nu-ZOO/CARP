@@ -204,20 +204,6 @@ class Digitiser():
             logging.exception("Stopping acsquisition failed:")
 
 
-    def trigger_and_record(self):
-        '''
-        Apply whatever trigger is designated and record.
-        Needs to also print occasionally to output.
-        '''
-        if self.isAcquiring:
-            evt_cnt = 0
-            match self.trigger_mode:
-                case 'SWTRIG':
-                    self.SW_record()
-                case _:
-                    logging.info(f'Trigger mode {self.trigger_mode} not currently implemented.')
-                    self.stop_acquisition()    
-
     def acquire(self):
         match self.trigger_mode:
             case 'SWTRIG':
