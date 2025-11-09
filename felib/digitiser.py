@@ -130,18 +130,39 @@ class Digitiser():
         try:
 
             self.dig.par.RECLEN.value = f'{self.record_length}'
-
-            if self.trigger_mode == 'SWTRIG':
-                self.dig.par.TRG_SW_ENABLE.value = 'TRUE'
-                self.dig.par.STARTMODE.value = 'START_MODE_SW'
-
+            self.dig.par.STARTMODE.value = 'START_MODE_SW' # currently only software modes enabled
+            match self.trigger_mode:
+                case 'SWTRIG':
+                    self.dig.par.TRG_SW_ENABLE.value = 'TRUE'
+                case _:
+                    self.dig.par.TRG_SW_ENABLE.value = 'FALSE'
+                
+            
             # configure channels
             for i, ch in enumerate(self.dig.ch):
-                ch.par.CH_ENABLED.value = 'TRUE' if i == 0 else 'FALSE' # only channel 0 atm
+
+                # extract channel config of interest
+                ch_dict = rec_dict.get(f'ch{i}')
+                
+                if ch_dict is None:
+                    continue
+                
+                ch.par.CH_ENABLED.value      = 'TRUE' if ch_dict['enabled'] else 'FALSE'
                 ch.par.CH_PRETRG.value = f'{self.pre_trigger}'
 
-            #self.dig.par.PRETRIGGERT.value = f'{self.pre_trigger}'
-            #self.dig.par.ACQTRIGGERSOURCE.value = self.triggerlevel
+                if ch_dict['self_trigger']:
+                    ch.par.CH_SELF_TRG_ENABLE.value = 'TRUE'
+                    ch.par.CH_THRESHOLD.value       = str(ch_dict['threshold'])
+                    if ch_dict['polarity'] == 'positive':
+                        ch.par.CH_POLARITY.value        = 'POLARITY_POSITIVE'
+                    elif ch_dict['polarity'] == 'negative':
+                        ch.par.CH_POLARITY.value        = 'POLARITY_NEGATIVE'
+
+                else:
+                    ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
+                # technically customisable
+                
+
 
             # calculate the true reclen value for outputting
             reclen_ns = int(self.dig.par.RECLEN.value)
