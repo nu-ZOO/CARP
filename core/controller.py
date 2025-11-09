@@ -204,10 +204,10 @@ class AcquisitionWorker(Thread):
     def __init__(self):
         super().__init__(daemon=True)
         self.digitiser = None
-        self._stop_event = Event()
-        self._cmd_buffer = Queue()
-        self._display_buffer = Queue()
-        self._data_buffer = Queue()
+        self.stop_event = Event()
+        self.cmd_buffer = Queue()
+        self.display_buffer = Queue()
+        self.data_buffer = Queue()
         self.data_ready_callback = None  # set by Controller
 
     def enqueue_cmd(self, cmd_type: CommandType, *args):
@@ -216,7 +216,7 @@ class AcquisitionWorker(Thread):
         '''
         self.cmd_buffer.put(Command(cmd_type, args))
 
-    def _handle_command(self, cmd: Command):
+    def handle_command(self, cmd: Command):
         logging.debug(f"Handling command: {cmd.type}")
         args = cmd.args
         match cmd.type:
@@ -233,19 +233,20 @@ class AcquisitionWorker(Thread):
             case _:
                 logging.warning(f"Unknown command: {cmd.type}")
 
-    def _connect_digitiser(self, dig_config, rec_config):
+    def connect_digitiser(self, dig_config, rec_config):
         # Load in configs
         dig_dict = read_config_file(dig_config)
         rec_dict = read_config_file(rec_config)
         if dig_dict is None:
             logging.error("Digitiser configuration file not found or invalid.")
             #raise ValueError("Digitiser configuration file not found or invalid.")
-        else:
-            self.digitiser = Digitiser(dig_dict)
-            digitiser.connect()
-            # Only add to the main window if it exists
-            # if hasattr(self, 'main_window'):
-            #     self.main_window.control_panel.acquisition.update()
+            return
+
+        self.digitiser = Digitiser(dig_dict)
+        digitiser.connect()
+        # Only add to the main window if it exists
+        # if hasattr(self, 'main_window'):
+        #     self.main_window.control_panel.acquisition.update()
 
         # once connected, configure recording setup
         if rec_dict is None:
@@ -258,28 +259,18 @@ class AcquisitionWorker(Thread):
         '''
         Starts the acquisition thread.
         '''
-        if self._thread and self._thread.is_alive():
-            logging.warning("Acquisition thread already running.")
-            return
-
         logging.info("Starting acquisition worker thread.")
-        self._stop_event.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
+        self.stop_event.clear()
+        self.run()
 
     def stop(self):
         '''
         Signal the acquisition thread to stop.
         '''
         logging.info("Stopping acquisition worker thread.")
-        self._stop_event.set()
+        self.stop_event.set()
         # enqueue STOP to unblock queue if it's waiting
-        self.enqueue_cmd(CommandType.STOP)
-        if self._thread:
-            self._thread.join(timeout=2.0)
-            if self._thread.is_alive():
-                logging.warning("Acquisition thread did not exit cleanly.")
-        logging.info("Acquisition worker stopped.")
+        self.enqueue_cmd(CommandType.EXIT)
 
     def run(self):
         logging.info("AcquisitionWorker thread started.")
@@ -288,7 +279,7 @@ class AcquisitionWorker(Thread):
                 # Handle commands
                 try:
                     cmd = self.cmd_buffer.get(timeout=0.01)
-                    self._handle_command(cmd)
+                    self.handle_command(cmd)
                 except queue.Empty:
                     pass
 
@@ -296,21 +287,39 @@ class AcquisitionWorker(Thread):
                 if self.digitiser and self.digitiser.isAcquiring:
                     try:
                         data = self.digitiser.acquire()
+                        if data is None:
+                            continue
+
                         # Non-blocking put to visual buffer
                         if self.display_buffer.full():
                             try:
-                                self.visual_buffer.get_nowait()  # discard oldest
+                                self.display_buffer.get_nowait()  # discard oldest
                             except queue.Empty:
                                 pass
-                        self.visual_buffer.put_nowait(data)
+
+                        # Push to display buffer (etc.)
+                        if not self.display_buffer.full():
+                            self.display_buffer.put_nowait(data)
+
+                        # Notify controller/UI
+                        if self.data_ready_callback:
+                            self.data_ready_callback(data)
+
                     except Exception as e:
                         logging.exception(f"Acquisition error: {e}")
 
         except Exception as e:
             logging.exception(f"Fatal error in AcquisitionWorker: {e}")
 
-        self._cleanup()
+        self.cleanup()
         logging.info("AcquisitionWorker thread exited cleanly.")
+
+    def cleanup(self):
+        if self.digitiser:
+            if self.digitiser.isAcquiring:
+                self.digitiser.stop_acquisition()
+            # del self.digitiser
+            # self.digitiser = None
 
 
 class Tracker:
