@@ -165,25 +165,30 @@ class Digitiser():
                 else:
                     ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
                 # technically customisable
-                
+
 
 
             # calculate the true reclen value for outputting
             reclen_ns = int(self.dig.par.RECLEN.value)
             self.reclen    = int(reclen_ns / int(1e3 / self.dig_info['sample_rate']))
 
-            # if DPP, need to specify that you're looking at waveforms specifically.
-            if self.dig.par.FWTYPE.value == 'DPP-PSD':
-                self.dig.par.WAVEFORMS.value = 'TRUE'
-                self.data_format = formats.DPP(int(self.dig.par.NUMCH.value), int(self.reclen))
-                # setting up probe types (READ UP ON THIS)
-                self.dig.vtrace[0].par.VTRACE_PROBE.value = 'VPROBE_INPUT'
-            
+            # set up data formats
+            match self.dig.par.FWTYPE.value:
+                case 'DPP-PSD':
+                    self.dig.par.WAVEFORMS.value = 'TRUE'
+                    self.data_format = formats.DPP(int(self.dig.par.NUMCH.value), int(self.reclen))
+                    # setting up probe types (READ UP ON THIS)
+                    self.dig.vtrace[0].par.VTRACE_PROBE.value = 'VPROBE_INPUT'
+                case 'SCOPE':
+                    self.data_format = formats.SCOPE(int(self.dig.par.NUMCH.value), int(self.reclen))
+                case _:
+                    logging.exception(f"Firmware type {self.dig.par.FWTYPE.value} not recognised.\nCurrent FWs available are DPP-DSD and SCOPE")
+
             endpoint_path = (self.dig.par.FWTYPE.value).replace('-', '')
             self.endpoint = self.dig.endpoint[endpoint_path]
             self.data = self.endpoint.set_read_data_format(self.data_format)
 
-        
+
             logging.info(f"Digitiser configured:\nrecord length {self.record_length}, pre-trigger {self.pre_trigger}, trigger mode {self.trigger_mode}.")
         except Exception as e:
             logging.exception(f"Failed to configure recording parameters.\n{e}")
