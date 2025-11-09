@@ -26,6 +26,11 @@ from core.logging import setup_logging
 from felib.digitiser import Digitiser
 from ui import oscilloscope
 
+from threading import Thread, Event
+from enum import Enum, auto
+from dataclasses import dataclass
+from queue import Queue
+
 class Controller:
     def __init__(self, 
                  dig_config: Optional[str] = None, 
@@ -174,38 +179,138 @@ class Controller:
         self.digitiser.isAcquiring = False
 
 
-class AcquisitionWorker(QObject):
+# ------ new ------
 
-    data_ready = Signal()
-
-    def __init__(self, wait_condition, digitiser, parent=None):
-        super().__init__(parent=parent)
-        self.wait_condition = wait_condition
-        self.digitiser = digitiser
-        self.mutex = QMutex()
-        # ensure on initial startup that you're not acquiring.
-        self.digitiser.isAcquiring = False
+class ComandType(Enum):
+    START = 0
+    STOP = 1
+    CONNECT = auto()
+    UPDATE = auto()
+    CH_DISPLAY = auto()
     
-    
-    def run(self):
+@dataclass
+class Command:
+    type: CommandType
+    args: tuple = ()
 
-        
-        
-        while True:
-            self.mutex.lock()
-            if not self.digitiser.isAcquiring:
-                self.wait_condition.wait(self.mutex)
-            self.mutex.unlock()
-            
-            
-            self.data = self.digitiser.acquire()
-            self.data_ready.emit()
-        
-        self.stop()
+class AcquisitionWorker(Thread):
+    '''
+    Handles digitiser I/O in a background thread.
+
+    This class is designed to be thread-safe and independent from Qt threading.
+    All commands and data flow through thread-safe mechanisms (queue, locks, events).
+    '''
+
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.digitiser = None
+        self._stop_event = Event()
+        self._cmd_buffer = Queue()
+        self._display_buffer = Queue()
+        self._data_buffer = Queue()
+        self.data_ready_callback = None  # set by Controller
+
+    def enqueue_cmd(self, cmd_type: CommandType, *args):
+        '''
+        Global interface for Controller.
+        '''
+        self.cmd_buffer.put(Command(cmd_type, args))
+
+    def _handle_command(self, cmd: Command):
+        logging.debug(f"Handling command: {cmd.type}")
+        args = cmd.args
+        match cmd.type:
+            case CommandType.CONNECT:
+                self._connect_digitiser(*args)
+            case CommandType.START:
+                if self.digitiser:
+                    self.digitiser.start_acquisition()
+            case CommandType.STOP:
+                if self.digitiser:
+                    self.digitiser.stop_acquisition()
+            case CommandType.EXIT:
+                self.stop_event.set()
+            case _:
+                logging.warning(f"Unknown command: {cmd.type}")
+
+    def _connect_digitiser(self, dig_config, rec_config):
+        # Load in configs
+        dig_dict = read_config_file(dig_config)
+        rec_dict = read_config_file(rec_config)
+        if dig_dict is None:
+            logging.error("Digitiser configuration file not found or invalid.")
+            #raise ValueError("Digitiser configuration file not found or invalid.")
+        else:
+            self.digitiser = Digitiser(dig_dict)
+            digitiser.connect()
+            # Only add to the main window if it exists
+            # if hasattr(self, 'main_window'):
+            #     self.main_window.control_panel.acquisition.update()
+
+        # once connected, configure recording setup
+        if rec_dict is None:
+            logging.warning("No recording configuration file provided.")
+        else:
+            if (digitiser is not None) and digitiser.isConnected:
+                digitiser.configure(rec_dict)
+
+    def start(self):
+        '''
+        Starts the acquisition thread.
+        '''
+        if self._thread and self._thread.is_alive():
+            logging.warning("Acquisition thread already running.")
+            return
+
+        logging.info("Starting acquisition worker thread.")
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
 
     def stop(self):
-        self.digitiser.stop_acquisition()
-        self.wait_condition.wakeAll()
+        '''
+        Signal the acquisition thread to stop.
+        '''
+        logging.info("Stopping acquisition worker thread.")
+        self._stop_event.set()
+        # enqueue STOP to unblock queue if it's waiting
+        self.enqueue_cmd(CommandType.STOP)
+        if self._thread:
+            self._thread.join(timeout=2.0)
+            if self._thread.is_alive():
+                logging.warning("Acquisition thread did not exit cleanly.")
+        logging.info("Acquisition worker stopped.")
+
+    def run(self):
+        logging.info("AcquisitionWorker thread started.")
+        try:
+            while not self.stop_event.is_set():
+                # Handle commands
+                try:
+                    cmd = self.cmd_buffer.get(timeout=0.01)
+                    self._handle_command(cmd)
+                except queue.Empty:
+                    pass
+
+                # Acquire data if running
+                if self.digitiser and self.digitiser.isAcquiring:
+                    try:
+                        data = self.digitiser.acquire()
+                        # Non-blocking put to visual buffer
+                        if self.display_buffer.full():
+                            try:
+                                self.visual_buffer.get_nowait()  # discard oldest
+                            except queue.Empty:
+                                pass
+                        self.visual_buffer.put_nowait(data)
+                    except Exception as e:
+                        logging.exception(f"Acquisition error: {e}")
+
+        except Exception as e:
+            logging.exception(f"Fatal error in AcquisitionWorker: {e}")
+
+        self._cleanup()
+        logging.info("AcquisitionWorker thread exited cleanly.")
 
 
 class Tracker:
