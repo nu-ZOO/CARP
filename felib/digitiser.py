@@ -113,7 +113,9 @@ class Digitiser():
             return None
 
 
-    def configure(self, rec_dict : dict):
+    def configure(self, 
+                  dig_dict : dict,
+                  rec_dict : dict):
                   #record_length: Optional[int] = 0,
                   #pre_trigger: Optional[int] = 0,
                   #trigger_level: Optional[str] = 'SWTRG'):
@@ -128,18 +130,39 @@ class Digitiser():
         try:
 
             self.dig.par.RECLEN.value = f'{self.record_length}'
-
-            if self.trigger_mode == 'SWTRIG':
-                self.dig.par.TRG_SW_ENABLE.value = 'TRUE'
-                self.dig.par.STARTMODE.value = 'START_MODE_SW'
-
+            self.dig.par.STARTMODE.value = 'START_MODE_SW' # currently only software modes enabled
+            match self.trigger_mode:
+                case 'SWTRIG':
+                    self.dig.par.TRG_SW_ENABLE.value = 'TRUE'
+                case _:
+                    self.dig.par.TRG_SW_ENABLE.value = 'FALSE'
+                
+            
             # configure channels
             for i, ch in enumerate(self.dig.ch):
-                ch.par.CH_ENABLED.value = 'TRUE' if i == 0 else 'FALSE' # only channel 0 atm
+
+                # extract channel config of interest
+                ch_dict = rec_dict.get(f'ch{i}')
+                
+                if ch_dict is None:
+                    continue
+                
+                ch.par.CH_ENABLED.value      = 'TRUE' if ch_dict['enabled'] else 'FALSE'
                 ch.par.CH_PRETRG.value = f'{self.pre_trigger}'
 
-            #self.dig.par.PRETRIGGERT.value = f'{self.pre_trigger}'
-            #self.dig.par.ACQTRIGGERSOURCE.value = self.triggerlevel
+                if ch_dict['self_trigger']:
+                    ch.par.CH_SELF_TRG_ENABLE.value = 'TRUE'
+                    ch.par.CH_THRESHOLD.value       = str(ch_dict['threshold'])
+                    if ch_dict['polarity'] == 'positive':
+                        ch.par.CH_POLARITY.value        = 'POLARITY_POSITIVE'
+                    elif ch_dict['polarity'] == 'negative':
+                        ch.par.CH_POLARITY.value        = 'POLARITY_NEGATIVE'
+
+                else:
+                    ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
+                # technically customisable
+                
+
 
             # calculate the true reclen value for outputting
             reclen_ns = int(self.dig.par.RECLEN.value)
@@ -204,24 +227,12 @@ class Digitiser():
             logging.exception("Stopping acsquisition failed:")
 
 
-    def trigger_and_record(self):
-        '''
-        Apply whatever trigger is designated and record.
-        Needs to also print occasionally to output.
-        '''
-        if self.isAcquiring:
-            evt_cnt = 0
-            match self.trigger_mode:
-                case 'SWTRIG':
-                    self.SW_record()
-                case _:
-                    logging.info(f'Trigger mode {self.trigger_mode} not currently implemented.')
-                    self.stop_acquisition()    
-
     def acquire(self):
         match self.trigger_mode:
             case 'SWTRIG':
                 return self.SW_record()
+            case 'SELFTRIG':
+                return self.SELFTRIG_record()
             case _:
                 logging.info(f'Trigger mode {self.trigger_mode} not currently implemented.')
                 self.stop_acquisition()    
@@ -233,7 +244,8 @@ class Digitiser():
         '''
         self.dig.cmd.SENDSWTRIGGER()
         try:
-            self.endpoint.read_data(100, self.data) # timeout first number in ms
+            self.endpoint.has_data(100)
+            self.endpoint.read_data(50, self.data) # timeout first number in ms
             return (self.data[7].value, self.data[3].value)
         except error.Error as ex:
             logging.exception("Error in readout:")
@@ -252,6 +264,23 @@ class Digitiser():
 
         
     
+    def SELFTRIG_record(self):
+        '''
+        Trigger on channels
+        '''
+        try:
+            self.endpoint.has_data(100)
+            self.endpoint.read_data(50, self.data)
+            return (self.data[7].value, self.data[3].value)
+        except error.Error as ex:
+            logging.exception("Error in readout:")
+            if ex.code is error.ErrorCode.TIMEOUT:
+                logging.error("TIMEOUT")
+            if ex.code is error.ErrorCode.STOP:
+                logging.exception("STOP")
+                raise ex
+
+
     def __del__(self):
         '''
         Destructor for the digitiser object.

@@ -139,7 +139,7 @@ class Controller:
             logging.warning("No recording configuration file provided.")
         else:
             if (digitiser is not None) and digitiser.isConnected:
-                digitiser.configure(rec_dict)
+                digitiser.configure(dig_dict, rec_dict)
         return digitiser              
             
 
@@ -164,55 +164,6 @@ class Controller:
         Simple stopping of acquisition, this will end the AcquisitionWorkers loop and terminate
         '''
         self.digitiser.isAcquiring = False
-
-    def trigger_and_record(self):
-        '''
-        Apply whatever trigger is designated and record.
-        Needs to also print occasionally to output.
-        '''
-        if self.digitiser.isAcquiring:
-            evt_cnt = 0
-            match self.digitiser.trigger_mode:
-                case 'SWTRIG':
-                    self.SW_record()
-                case _:
-                    logging.info(f'Trigger mode {self.trigger_mode} not currently implemented.')
-                    self.stop_acquisition()    
-
-        # check after running if isAcquiring is still enabled.
-        if not self.digitiser.isAcquiring:
-            self.digitiser.stop_acquisition()
-            logging.info(f'Stopped acquisition.')
-
-
-    def SW_record(self):
-        # spam triggers as fast as possible here
-        evt_counter = 0
-        while self.digitiser.isAcquiring:
-            self.digitiser.dig.cmd.SENDSWTRIGGER()
-
-            try:
-                self.digitiser.endpoint.read_data(100, self.digitiser.data) # timeout first number in ms
-            except error.Error as ex:
-                logging.exception("Error in readout:")
-                if ex.code is error.ErrorCode.TIMEOUT:
-                    continue
-                if ex.code is error.ErrorCode.STOP:
-                    break
-                raise ex
-        
-            # ensure the input and trigger are acceptable (I think?)
-            #assert self.data[3].value == 1 # VPROBE INPUT? I need to understand this
-            #assert self.data[6].value == 1 # VPROBE TRIGGER?
-            waveform_size = self.digitiser.data[7].value
-            valid_sample_range = np.arange(0, waveform_size, dtype = waveform_size.dtype)
-
-            # increase the event counter
-            evt_counter += 1
-
-            if (evt_counter % 100) == 0:
-                self.main_window.screen.update_ch(valid_sample_range, (self.digitiser.data[3].value))
-
 
 
 class AcquisitionWorker(QObject):
