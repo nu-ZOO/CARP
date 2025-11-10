@@ -112,6 +112,9 @@ class Acquisition(QGroupBox):
         
         self.controller = controller
         
+        # local flags (rather than using digitiser flags <-- race condition) 
+        self.acquiring = False
+        self.recording = False
 
         self.start_stop = QPushButton("Start")
         self.record     = QPushButton("Record")
@@ -123,15 +126,18 @@ class Acquisition(QGroupBox):
         layout.addWidget(self.start_stop)
         layout.addWidget(self.record)
         # update button based on digitiser state
+
         self.update()
     
 
-    def update(self):
+    def update(self): 
         '''
         Update the acquisition status based on the digitiser state.
         '''
-        if self.controller.digitiser is None:
+        # this needs fixing
+        if not self.acquiring:
             self.start_stop.setStyleSheet("background-color: grey; color: black")
+        if not self.recording:
             self.record.setStyleSheet("background-color: grey; color: black")
         else:
             # start stop
@@ -143,17 +149,18 @@ class Acquisition(QGroupBox):
         
 
     def toggle_acquisition(self):
-        if self.controller.digitiser.isAcquiring:
+        if self.acquiring:
             logging.info('Stopping acquisition...')
             self.start_stop.setText("Start")
             self.start_stop.setStyleSheet("background-color: green; color: black")
+            self.acquiring = False
             # stop the acquisition
-            self.controller.digitiser.stop_acquisition()
+            self.controller.stop_acquisition()
         else:
             logging.info('Starting acquisition...')
             self.start_stop.setText("Stop")
             self.start_stop.setStyleSheet("background-color: red; color: white")
-            self.controller.digitiser.isAcquiring = True
+            self.acquiring = True
             # start the acquisition
             self.controller.start_acquisition()
             
