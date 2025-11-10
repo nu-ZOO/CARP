@@ -26,10 +26,24 @@ from core.logging import setup_logging
 from felib.digitiser import Digitiser
 from ui import oscilloscope
 
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 from enum import Enum, auto
 from dataclasses import dataclass
-from queue import Queue
+from queue import Queue, Empty
+
+
+class CommandType(Enum):
+    START = 0
+    STOP = 1
+    CONNECT = auto()
+    UPDATE = auto()
+    CH_DISPLAY = auto()
+    
+@dataclass
+class Command:
+    type: CommandType
+    args: tuple = ()
+
 
 class Controller:
     def __init__(self, 
@@ -42,24 +56,25 @@ class Controller:
         # Initialise logging and tracking
         setup_logging()
         self.tracker = Tracker()
+        logging.info("Controller initialising.")
 
-        # digitiser connection first
+        # Digitiser configuration
         self.dig_config = dig_config
         self.rec_config = rec_config
 
-        if dig_config is None:
-            logging.warning("No digitiser configuration file provided. Digitiser will not be connected.")
-            self.digitiser = None
-        else:
-            self.digitiser = self.connect_digitiser()
+        # Thread-safe communication channels
+        self.cmd_buffer = Queue(maxsize=10)
+        self.display_buffer = Queue(maxsize=1024)
+        self.stop_event = Event()
 
-        # check digitiser connection, if valid set isConnected to True
-        if self.digitiser is not None:
-            self.digitiser.isConnected = True
-            logging.info(f"Digitiser connected: {self.digitiser.URI}")
-        else:
-            logging.warning("Digitiser not connected.")
-
+        # Acquisition worker
+        self.worker = AcquisitionWorker(
+            cmd_buffer=self.cmd_buffer,
+            display_buffer=self.display_buffer,
+            stop_event=self.stop_event,
+        )
+        self.worker.start()
+        logging.info("Acquisition worker thread started.")
 
         # gui second
         self.app = QApplication([])
@@ -69,50 +84,30 @@ class Controller:
         self.fps_timer.timeout.connect(self.update_fps)
         self.spf = 1 # seconds per frame
 
-
-        # worker third
-        if self.digitiser is not None and self.digitiser.isConnected:
-            self.initialise_worker()
-
-    def initialise_worker(self):
-        '''
-        Initialise the worker thread.
-        This in turn should begin the data collection (I think?)
-        '''
-
-        # create thread to manage data output
-        self.worker_wait_condition = QWaitCondition()
-        self.acquisition_worker    = AcquisitionWorker(self.worker_wait_condition, digitiser = self.digitiser)
-        self.acquisition_thread    = QThread()
-        self.acquisition_worker.moveToThread(self.acquisition_thread)
-        self.acquisition_thread.started.connect(self.acquisition_worker.run)
-        self.acquisition_worker.data_ready.connect(self.data_handling)
-        self.acquisition_thread.start()
+        self.connect_digitiser()
 
 
     def data_handling(self):
-        # visualise (and at some point, collect in a file)
+        '''
+        Visualise data.
+        '''
         try:
-            wf_size, ADCs = self.acquisition_worker.data
-        except TypeError:
-            # type error occurs when recording in digitiser fails, so no error output here please!
+            # non-blocking read from display queue
+            data = self.display_buffer.get_nowait()
+        except Empty:
             return
-        except Exception as e:
-            logging.exception("Error in data_handling(): ")
 
+        try:
+            wf_size, ADCs = data
+
+            # update visuals
+            self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
             
+            # ping the tracker (make this optional)
+            self.tracker.track(ADCs.nbytes)
 
-        # save the data (PUT IT HERE)
-
-        # update visuals
-        self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
-        
-        # ping the tracker (make this optional)
-        self.tracker.track(ADCs.nbytes)
-        
-        # prep the next thread
-        if self.digitiser.isAcquiring:
-            self.worker_wait_condition.notify_one()
+        except Exception as e:
+            logging.exception(f"Error updating display: {e}")
 
 
     def update_fps(self):
@@ -131,67 +126,44 @@ class Controller:
         Connect to the digitiser using the provided configuration file.
         This is a placeholder function and should be replaced with actual
         digitiser connection logic.
+
+        Need to allow for changing config files after initial application launch.
         '''
 
-        # Load in configs
-        dig_dict = read_config_file(self.dig_config)
-        rec_dict = read_config_file(self.rec_config)
-        
-        if dig_dict is None:
-            logging.error("Digitiser configuration file not found or invalid.")
-            #raise ValueError("Digitiser configuration file not found or invalid.")
-        else:
-            digitiser = Digitiser(dig_dict)
-            digitiser.connect()
-            # Only add to the main window if it exists
-            if hasattr(self, 'main_window'):
-                self.main_window.control_panel.acquisition.update()
+        # Load in new configs
+        # self.dig_dict = some other dig_config
+        # self.rec_dict = some other rec_config
 
-        # once connected, configure recording setup
-        if rec_dict is None:
-            logging.warning("No recording configuration file provided.")
-        else:
-            if (digitiser is not None) and digitiser.isConnected:
-                digitiser.configure(dig_dict, rec_dict)
-        return digitiser              
-            
+        self.cmd_buffer.put(Command(CommandType.CONNECT, (self.dig_config, self.rec_config)))
+
+        # Only add to the main window if it exists
+        if hasattr(self, 'main_window'):
+            self.main_window.control_panel.acquisition.update()
+
 
     def start_acquisition(self):
         '''
-        Start the acquisition in multiple steps:
-            - Start the digitiser acquisition based on whatever trigger
-              settings are applied,
-            - Initialise the data reader,
-            - Initialise the output visuals.
+        Start digitiser acquisition.
         '''
-        try:
-            self.digitiser.start_acquisition()
-            self.worker_wait_condition.wakeAll()
-        except Exception as e:
-            logging.exception('Failed to start acquisition.')
-        #self.digitiser.start_acquisition()
-        #self.trigger_and_record()
+        logging.info("Starting acquisition.")
+        self.cmd_buffer.put(Command(CommandType.START))
         
     def stop_acquisition(self):
         '''
-        Simple stopping of acquisition, this will end the AcquisitionWorkers loop and terminate
+        Stop digitiser acquisition.
         '''
-        self.digitiser.isAcquiring = False
+        logging.info("Stopping acquisition.")
+        self.cmd_buffer.put(Command(CommandType.STOP))
 
-
-# ------ new ------
-
-class ComandType(Enum):
-    START = 0
-    STOP = 1
-    CONNECT = auto()
-    UPDATE = auto()
-    CH_DISPLAY = auto()
-    
-@dataclass
-class Command:
-    type: CommandType
-    args: tuple = ()
+    def shutdown(self):
+        '''
+        Carefully shut down acquisition and worker thread.
+        '''
+        logging.info("Shutting down controller.")
+        self.cmd_buffer.put(Command(CommandType.EXIT))
+        self.stop_event.set()
+        self.worker.join(timeout=2)
+        logging.info("Controller shutdown complete.")
 
 class AcquisitionWorker(Thread):
     '''
@@ -201,12 +173,12 @@ class AcquisitionWorker(Thread):
     All commands and data flow through thread-safe mechanisms (queue, locks, events).
     '''
 
-    def __init__(self):
+    def __init__(self, cmd_buffer: Queue, display_buffer: Queue, stop_event: Event):
         super().__init__(daemon=True)
         self.digitiser = None
-        self.stop_event = Event()
-        self.cmd_buffer = Queue()
-        self.display_buffer = Queue()
+        self.stop_event = stop_event
+        self.cmd_buffer = cmd_buffer
+        self.display_buffer = display_buffer
         self.data_buffer = Queue()
         self.data_ready_callback = None  # set by Controller
 
@@ -234,43 +206,26 @@ class AcquisitionWorker(Thread):
                 logging.warning(f"Unknown command: {cmd.type}")
 
     def connect_digitiser(self, dig_config, rec_config):
+        '''
+        Connect to digitiser with given configs.
+        '''
         # Load in configs
         dig_dict = read_config_file(dig_config)
         rec_dict = read_config_file(rec_config)
+
         if dig_dict is None:
             logging.error("Digitiser configuration file not found or invalid.")
-            #raise ValueError("Digitiser configuration file not found or invalid.")
             return
 
         self.digitiser = Digitiser(dig_dict)
-        digitiser.connect()
-        # Only add to the main window if it exists
-        # if hasattr(self, 'main_window'):
-        #     self.main_window.control_panel.acquisition.update()
+        self.digitiser.connect()
 
         # once connected, configure recording setup
         if rec_dict is None:
             logging.warning("No recording configuration file provided.")
         else:
-            if (digitiser is not None) and digitiser.isConnected:
-                digitiser.configure(rec_dict)
-
-    def start(self):
-        '''
-        Starts the acquisition thread.
-        '''
-        logging.info("Starting acquisition worker thread.")
-        self.stop_event.clear()
-        self.run()
-
-    def stop(self):
-        '''
-        Signal the acquisition thread to stop.
-        '''
-        logging.info("Stopping acquisition worker thread.")
-        self.stop_event.set()
-        # enqueue STOP to unblock queue if it's waiting
-        self.enqueue_cmd(CommandType.EXIT)
+            if (self.digitiser is not None) and self.digitiser.isConnected:
+                self.digitiser.configure(rec_dict)
 
     def run(self):
         logging.info("AcquisitionWorker thread started.")
