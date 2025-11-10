@@ -73,6 +73,11 @@ class Controller:
             display_buffer=self.display_buffer,
             stop_event=self.stop_event,
         )
+
+        # Set the callback to the controller's data_handling method
+        self.worker.data_ready_callback = self.data_handling
+
+        # Start thread and log
         self.worker.start()
         logging.info("Acquisition worker thread started.")
 
@@ -91,23 +96,24 @@ class Controller:
         '''
         Visualise data.
         '''
-        try:
-            # non-blocking read from display queue
-            data = self.display_buffer.get_nowait()
-        except Empty:
-            return
+        while True:
+            try:
+                # non-blocking read from display queue
+                data = self.display_buffer.get_nowait()
+            except Empty:
+                break
 
-        try:
-            wf_size, ADCs = data
+            try:
+                wf_size, ADCs = data
 
-            # update visuals
-            self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
-            
-            # ping the tracker (make this optional)
-            self.tracker.track(ADCs.nbytes)
+                # update visuals
+                self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
+                
+                # ping the tracker (make this optional)
+                self.tracker.track(ADCs.nbytes)
 
-        except Exception as e:
-            logging.exception(f"Error updating display: {e}")
+            except Exception as e:
+                logging.exception(f"Error updating display: {e}")
 
 
     def update_fps(self):
@@ -163,7 +169,10 @@ class Controller:
         self.cmd_buffer.put(Command(CommandType.EXIT))
         self.stop_event.set()
         self.worker.join(timeout=2)
-        logging.info("Controller shutdown complete.")
+        if self.worker.is_alive():
+            logging.warning("AcquisitionWorker did not stop cleanly.")
+        else:
+            logging.info("Controller shutdown complete.")
 
 class AcquisitionWorker(Thread):
     '''
@@ -181,6 +190,8 @@ class AcquisitionWorker(Thread):
         self.display_buffer = display_buffer
         self.data_buffer = Queue()
         self.data_ready_callback = None  # set by Controller
+        self.dig_config = None
+        self.rec_config = None
 
     def enqueue_cmd(self, cmd_type: CommandType, *args):
         '''
@@ -191,24 +202,42 @@ class AcquisitionWorker(Thread):
     def handle_command(self, cmd: Command):
         logging.debug(f"Handling command: {cmd.type}")
         args = cmd.args
-        match cmd.type:
-            case CommandType.CONNECT:
-                self._connect_digitiser(*args)
-            case CommandType.START:
-                if self.digitiser:
-                    self.digitiser.start_acquisition()
-            case CommandType.STOP:
-                if self.digitiser:
-                    self.digitiser.stop_acquisition()
-            case CommandType.EXIT:
-                self.stop_event.set()
-            case _:
-                logging.warning(f"Unknown command: {cmd.type}")
+        try:
+            match cmd.type:
+                case CommandType.CONNECT:
+                    self.connect_digitiser(*args)
+                case CommandType.START:
+                    self.start_acquisition()
+                case CommandType.STOP:
+                    self.cleanup()
+                case CommandType.EXIT:
+                    self.stop_event.set()
+                case _:
+                    logging.warning(f"Unknown command: {cmd.type}")
+        except Exception as e:
+            logging.exception(f"Command {cmd.type} failed: {e}")
 
+    def start_acquisition(self):
+        if not self.digitiser:
+            logging.info("No digitiser instance — reconnecting before start.")
+            if not (self.dig_config and self.rec_config):
+                logging.error("No stored configuration — cannot reconnect digitiser.")
+                return
+            self.connect_digitiser(self.dig_config, self.rec_config)
+        try:
+            self.digitiser.start_acquisition()
+            logging.info("Digitiser acquisition started successfully.")
+        except Exception as e:
+            logging.exception(f"Start acquisition failed: {e}")
+    
     def connect_digitiser(self, dig_config, rec_config):
         '''
         Connect to digitiser with given configs.
         '''
+        # cache configs
+        self.dig_config = dig_config
+        self.rec_config = rec_config
+
         # Load in configs
         dig_dict = read_config_file(dig_config)
         rec_dict = read_config_file(rec_config)
@@ -225,18 +254,19 @@ class AcquisitionWorker(Thread):
             logging.warning("No recording configuration file provided.")
         else:
             if (self.digitiser is not None) and self.digitiser.isConnected:
-                self.digitiser.configure(rec_dict)
+                self.digitiser.configure(dig_dict, rec_dict)
 
     def run(self):
         logging.info("AcquisitionWorker thread started.")
         try:
             while not self.stop_event.is_set():
                 # Handle commands
-                try:
-                    cmd = self.cmd_buffer.get(timeout=0.01)
-                    self.handle_command(cmd)
-                except queue.Empty:
-                    pass
+                while True:
+                    try:
+                        cmd = self.cmd_buffer.get(timeout=0.01)
+                        self.handle_command(cmd)
+                    except Empty:
+                        break
 
                 # Acquire data if running
                 if self.digitiser and self.digitiser.isAcquiring:
@@ -249,7 +279,7 @@ class AcquisitionWorker(Thread):
                         if self.display_buffer.full():
                             try:
                                 self.display_buffer.get_nowait()  # discard oldest
-                            except queue.Empty:
+                            except Empty:
                                 pass
 
                         # Push to display buffer (etc.)
@@ -258,10 +288,12 @@ class AcquisitionWorker(Thread):
 
                         # Notify controller/UI
                         if self.data_ready_callback:
-                            self.data_ready_callback(data)
+                            self.data_ready_callback()
 
                     except Exception as e:
                         logging.exception(f"Acquisition error: {e}")
+
+                #time.sleep(1)
 
         except Exception as e:
             logging.exception(f"Fatal error in AcquisitionWorker: {e}")
@@ -273,8 +305,9 @@ class AcquisitionWorker(Thread):
         if self.digitiser:
             if self.digitiser.isAcquiring:
                 self.digitiser.stop_acquisition()
-            # del self.digitiser
-            # self.digitiser = None
+            del self.digitiser
+            self.digitiser = None
+        logging.info("Digitiser fully cleaned up after STOP.")
 
 
 class Tracker:

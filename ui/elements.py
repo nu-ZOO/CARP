@@ -134,19 +134,21 @@ class Acquisition(QGroupBox):
         '''
         Update the acquisition status based on the digitiser state.
         '''
-        # this needs fixing
-        if not self.acquiring:
+        try:
+            self.start_stop.clicked.disconnect()
+            self.record.clicked.disconnect()
+        except TypeError:
+            pass
+
+        if self.controller is None:
             self.start_stop.setStyleSheet("background-color: grey; color: black")
-        if not self.recording:
             self.record.setStyleSheet("background-color: grey; color: black")
         else:
-            # start stop
             self.start_stop.setStyleSheet("background-color: green; color: black")
             self.start_stop.clicked.connect(self.toggle_acquisition)
-            # recording...
             self.record.setStyleSheet("background-color: red; color: black")
             self.record.clicked.connect(self.toggle_recording)
-        
+       
 
     def toggle_acquisition(self):
         if self.acquiring:
