@@ -136,8 +136,7 @@ class Digitiser():
                     self.dig.par.TRG_SW_ENABLE.value = 'TRUE'
                 case _:
                     self.dig.par.TRG_SW_ENABLE.value = 'FALSE'
-                
-            
+
             # configure channels
             for i, ch in enumerate(self.dig.ch):
 
@@ -150,13 +149,18 @@ class Digitiser():
                 ch.par.CH_ENABLED.value      = 'TRUE' if ch_dict['enabled'] else 'FALSE'
                 ch.par.CH_PRETRG.value = f'{self.pre_trigger}'
 
-                if ch_dict['self_trigger']:
+                # ensure self trigger only enabled when you don't have SWTRIG enabled
+                if ch_dict['self_trigger'] and self.trigger_mode != 'SWTRIG':
                     ch.par.CH_SELF_TRG_ENABLE.value = 'TRUE'
                     ch.par.CH_THRESHOLD.value       = str(ch_dict['threshold'])
-                    if ch_dict['polarity'] == 'positive':
-                        ch.par.CH_POLARITY.value        = 'POLARITY_POSITIVE'
-                    elif ch_dict['polarity'] == 'negative':
-                        ch.par.CH_POLARITY.value        = 'POLARITY_NEGATIVE'
+                else:
+                    # doesn't reset by default! so forcing this here
+                    ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
+                
+                if ch_dict['polarity'] == 'positive':
+                    ch.par.CH_POLARITY.value        = 'POLARITY_POSITIVE'
+                elif ch_dict['polarity'] == 'negative':
+                    ch.par.CH_POLARITY.value        = 'POLARITY_NEGATIVE'
 
                 else:
                     ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
