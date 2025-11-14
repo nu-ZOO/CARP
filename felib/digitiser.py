@@ -136,8 +136,7 @@ class Digitiser():
                     self.dig.par.TRG_SW_ENABLE.value = 'TRUE'
                 case _:
                     self.dig.par.TRG_SW_ENABLE.value = 'FALSE'
-                
-            
+
             # configure channels
             for i, ch in enumerate(self.dig.ch):
 
@@ -150,13 +149,18 @@ class Digitiser():
                 ch.par.CH_ENABLED.value      = 'TRUE' if ch_dict['enabled'] else 'FALSE'
                 ch.par.CH_PRETRG.value = f'{self.pre_trigger}'
 
-                if ch_dict['self_trigger']:
+                # ensure self trigger only enabled when you don't have SWTRIG enabled
+                if ch_dict['self_trigger'] and self.trigger_mode != 'SWTRIG':
                     ch.par.CH_SELF_TRG_ENABLE.value = 'TRUE'
                     ch.par.CH_THRESHOLD.value       = str(ch_dict['threshold'])
-                    if ch_dict['polarity'] == 'positive':
-                        ch.par.CH_POLARITY.value        = 'POLARITY_POSITIVE'
-                    elif ch_dict['polarity'] == 'negative':
-                        ch.par.CH_POLARITY.value        = 'POLARITY_NEGATIVE'
+                else:
+                    # doesn't reset by default! so forcing this here
+                    ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
+                
+                if ch_dict['polarity'] == 'positive':
+                    ch.par.CH_POLARITY.value        = 'POLARITY_POSITIVE'
+                elif ch_dict['polarity'] == 'negative':
+                    ch.par.CH_POLARITY.value        = 'POLARITY_NEGATIVE'
 
                 else:
                     ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
@@ -242,15 +246,17 @@ class Digitiser():
         '''
         Send software trigger and read the data out.
         '''
+        check_timeout = 100
+        read_timeout  = 50
         self.dig.cmd.SENDSWTRIGGER()
         try:
-            self.endpoint.has_data(100)
-            self.endpoint.read_data(50, self.data) # timeout first number in ms
+            self.endpoint.has_data(check_timeout)
+            self.endpoint.read_data(read_timeout, self.data) # timeout first number in ms
             return (self.data[7].value, self.data[3].value)
         except error.Error as ex:
-            logging.exception("Error in readout:")
+            #logging.exception("Error in readout:")
             if ex.code is error.ErrorCode.TIMEOUT:
-                logging.error("TIMEOUT")
+                logging.warning("Trigger timed out before receiving data. Increase timeout to avoid this warning") # Resolved by increasing timeout
             if ex.code is error.ErrorCode.STOP:
                 logging.exception("STOP")
                 raise ex
@@ -268,14 +274,16 @@ class Digitiser():
         '''
         Trigger on channels
         '''
+        check_timeout = 100
+        read_timeout  = 50
         try:
-            self.endpoint.has_data(100)
-            self.endpoint.read_data(50, self.data)
+            self.endpoint.has_data(check_timeout)
+            self.endpoint.read_data(read_timeout, self.data)
             return (self.data[7].value, self.data[3].value)
         except error.Error as ex:
-            logging.exception("Error in readout:")
+            #logging.exception("Error in readout:")
             if ex.code is error.ErrorCode.TIMEOUT:
-                logging.error("TIMEOUT")
+                logging.warning("Trigger timed out before receiving data. Increase timeout to avoid this warning") # Resolved by increasing timeout
             if ex.code is error.ErrorCode.STOP:
                 logging.exception("STOP")
                 raise ex

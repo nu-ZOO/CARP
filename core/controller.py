@@ -87,7 +87,15 @@ class Controller:
 
     def data_handling(self):
         # visualise (and at some point, collect in a file)
-        wf_size, ADCs = self.acquisition_worker.data
+        try:
+            wf_size, ADCs = self.acquisition_worker.data
+        except TypeError:
+            # type error occurs when recording in digitiser fails, so no error output here please!
+            return
+        except Exception as e:
+            logging.exception("Error in data_handling(): ")
+
+            
 
         # save the data (PUT IT HERE)
 
