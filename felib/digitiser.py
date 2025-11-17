@@ -158,12 +158,12 @@ class Digitiser():
 
                 # ensure self trigger only enabled when you don't have SWTRIG enabled
                 if ch_dict['self_trigger'] and self.trigger_mode != 'SWTRIG':
-                    ch.par.CH_SELF_TRG_ENABLE.value = 'TRUE'
+                    if self.dig.par.FWTYPE.value == 'DPP-DSD' : ch.par.CH_SELF_TRG_ENABLE.value = 'TRUE'
                     ch.par.CH_THRESHOLD.value       = str(ch_dict['threshold'])
                 else:
                     # doesn't reset by default! so forcing this here
-                    ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
-                
+                    if self.dig.par.FWTYPE.value == 'DPP-DSD' : ch.par.CH_SELF_TRG_ENABLE.value = 'FALSE'
+
                 if ch_dict['polarity'] == 'positive':
                     ch.par.CH_POLARITY.value        = 'POLARITY_POSITIVE'
                 elif ch_dict['polarity'] == 'negative':
