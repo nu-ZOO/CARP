@@ -143,7 +143,9 @@ class Digitiser():
                 # extract channel config of interest
                 ch_dict = rec_dict.get(f'ch{i}')
 
+                # disable channels if not explicitly called
                 if ch_dict is None:
+                    ch.par.CH_ENABLED.value  = 'FALSE'
                     continue
 
                 ch.par.CH_ENABLED.value      = 'TRUE' if ch_dict['enabled'] else 'FALSE'
