@@ -199,16 +199,17 @@ class Digitiser():
             # generalised extraction of data parameters
             match self.dig.par.FWTYPE.value:
                 case 'DPP-PSD':
-                    channel       = self.data[0].value
-                    timestamp     = self.data[1].value
-                    waveform_size = self.data[7].value
-                    waveform      = self.data[3].value
+                    self.channel       = self.data[0].value
+                    self.timestamp     = self.data[1].value
+                    self.waveform_size = self.data[7].value
+                    self.waveform      = self.data[3].value
                 case 'SCOPE':
                     # no channel parameter as channels are treated differently
                     # all channels are within the dataset, check the data format to understand the shape
-                    timestamp     = self.data[1].value
-                    waveform_size = self.data[3].value
-                    waveform      = self.data[4].value                case _:
+                    self.timestamp     = self.data[1].value
+                    self.waveform_size = self.data[3].value
+                    self.waveform      = self.data[4].value
+                case _:
                     logging.exception(f"Firmware type {self.dig.par.FWTYPE.value} not recognised.\nCurrent FWs available are DPP-DSD and SCOPE")
 
             logging.info(f"Digitiser configured:\nrecord length {self.record_length}, pre-trigger {self.pre_trigger}, trigger mode {self.trigger_mode}.")
@@ -279,7 +280,7 @@ class Digitiser():
         try:
             self.endpoint.has_data(check_timeout)
             self.endpoint.read_data(read_timeout, self.data) # timeout first number in ms
-            return (waveform_size, waveform)
+            return (self.waveform_size, self.waveform)
         except error.Error as ex:
             #logging.exception("Error in readout:")
             if ex.code is error.ErrorCode.TIMEOUT:
