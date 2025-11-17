@@ -67,21 +67,21 @@ def SCOPE(nch, record_length):
     data_format = [
         {
             'name': 'EVENT_SIZE',
-            'type': device.DataType.SIZE_T,
+            'type': 'SIZE_T',
         },
         {
             'name': 'TIMESTAMP',
-            'type': device.DataType.U64,
+            'type': 'U64',
         },
         {
             'name': 'WAVEFORM',
-            'type': device.DataType.U16,
+            'type': 'U16',
             'dim': 2,
             'shape': [nch, record_length],
         },
         {
             'name': 'WAVEFORM_SIZE',
-            'type': device.DataType.SIZE_T,
+            'type': 'SIZE_T',
             'dim': 1,
             'shape': [nch],
         }
