@@ -100,8 +100,17 @@ class Controller:
         # save the data (PUT IT HERE)
 
         # update visuals
-        self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
-        
+        # SCOPE firmware and DPP-DSD hold the data differently:
+        #   SCOPE returns an array, where each channels waveform is an element in the array
+        #   DPP-DSD returns the channel number and the array together, although I havent tested multichannel output
+        # We deal with this stupidly atm as we don't include multichannel support.
+        # THIS WILL BE FIXED COME MULTI CHANNEL! IT HAS TO BE!
+        if ADCs.ndim == 2: #scope format
+            self.main_window.screen.update_ch(np.arange(0, wf_size[0], dtype=wf_size[0].dtype), ADCs[0])
+        else:
+            self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
+
+
         # ping the tracker (make this optional)
         self.tracker.track(ADCs.nbytes)
 
