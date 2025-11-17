@@ -149,7 +149,12 @@ class Digitiser():
                     continue
 
                 ch.par.CH_ENABLED.value      = 'TRUE' if ch_dict['enabled'] else 'FALSE'
-                ch.par.CH_PRETRG.value = f'{self.pre_trigger}'
+
+                # set post trigger for SCOPE, pre trigger for DPP-DSD
+                # in principle, the SCOPE one is digitiser-wide, and so doesnt have to be set per channel
+                # but I like both here
+                if self.dig.par.FWTYPE.value   == 'DPP-DSD' : ch.par.CH_PRETRIG.value    = f'{self.pre_trigger}'
+                elif self.dig.par.FWTYPE.value == 'SCOPE'   : self.dig.par.POSTTRG.value = f'{self.record_length - self.pre_trigger}'
 
                 # ensure self trigger only enabled when you don't have SWTRIG enabled
                 if ch_dict['self_trigger'] and self.trigger_mode != 'SWTRIG':
