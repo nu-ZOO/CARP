@@ -27,8 +27,8 @@ from felib.digitiser import Digitiser
 from ui import oscilloscope
 
 class Controller:
-    def __init__(self, 
-                 dig_config: Optional[str] = None, 
+    def __init__(self,
+                 dig_config: Optional[str] = None,
                  rec_config: Optional[str] = None):
         '''
         Initialise controller for GUI and digitiser
@@ -95,16 +95,25 @@ class Controller:
         except Exception as e:
             logging.exception("Error in data_handling(): ")
 
-            
+
 
         # save the data (PUT IT HERE)
 
         # update visuals
-        self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
-        
+        # SCOPE firmware and DPP-DSD hold the data differently:
+        #   SCOPE returns an array, where each channels waveform is an element in the array
+        #   DPP-DSD returns the channel number and the array together, although I havent tested multichannel output
+        # We deal with this stupidly atm as we don't include multichannel support.
+        # THIS WILL BE FIXED COME MULTI CHANNEL! IT HAS TO BE!
+        if ADCs.ndim == 2: #scope format
+            self.main_window.screen.update_ch(np.arange(0, wf_size[0], dtype=wf_size[0].dtype), ADCs[0])
+        else:
+            self.main_window.screen.update_ch(np.arange(0, wf_size, dtype=wf_size.dtype), ADCs)
+
+
         # ping the tracker (make this optional)
         self.tracker.track(ADCs.nbytes)
-        
+
         # prep the next thread
         if self.digitiser.isAcquiring:
             self.worker_wait_condition.notify_one()
@@ -120,7 +129,7 @@ class Controller:
     def run_app(self):
         self.main_window.show()
         return self.app.exec()
-    
+
     def connect_digitiser(self):
         '''
         Connect to the digitiser using the provided configuration file.
@@ -131,7 +140,7 @@ class Controller:
         # Load in configs
         dig_dict = read_config_file(self.dig_config)
         rec_dict = read_config_file(self.rec_config)
-        
+
         if dig_dict is None:
             logging.error("Digitiser configuration file not found or invalid.")
             #raise ValueError("Digitiser configuration file not found or invalid.")
@@ -148,8 +157,8 @@ class Controller:
         else:
             if (digitiser is not None) and digitiser.isConnected:
                 digitiser.configure(dig_dict, rec_dict)
-        return digitiser              
-            
+        return digitiser
+
 
     def start_acquisition(self):
         '''
@@ -166,7 +175,7 @@ class Controller:
             logging.exception('Failed to start acquisition.')
         #self.digitiser.start_acquisition()
         #self.trigger_and_record()
-        
+
     def stop_acquisition(self):
         '''
         Simple stopping of acquisition, this will end the AcquisitionWorkers loop and terminate
@@ -185,22 +194,22 @@ class AcquisitionWorker(QObject):
         self.mutex = QMutex()
         # ensure on initial startup that you're not acquiring.
         self.digitiser.isAcquiring = False
-    
-    
+
+
     def run(self):
 
-        
-        
+
+
         while True:
             self.mutex.lock()
             if not self.digitiser.isAcquiring:
                 self.wait_condition.wait(self.mutex)
             self.mutex.unlock()
-            
-            
+
+
             self.data = self.digitiser.acquire()
             self.data_ready.emit()
-        
+
         self.stop()
 
     def stop(self):
