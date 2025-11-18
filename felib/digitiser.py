@@ -195,7 +195,6 @@ class Digitiser():
             self.endpoint = self.dig.endpoint[endpoint_path]
             self.data = self.endpoint.set_read_data_format(self.data_format)
 
-
             # generalised extraction of data parameters
             match self.dig.par.FWTYPE.value:
                 case 'DPP-PSD':
@@ -208,7 +207,7 @@ class Digitiser():
                     # all channels are within the dataset, check the data format to understand the shape
                     self.timestamp     = self.data[1].value
                     self.waveform_size = self.data[3].value
-                    self.waveform      = self.data[4].value
+                    self.waveform      = self.data[2].value
                 case _:
                     logging.exception(f"Firmware type {self.dig.par.FWTYPE.value} not recognised.\nCurrent FWs available are DPP-DSD and SCOPE")
 
