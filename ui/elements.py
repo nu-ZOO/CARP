@@ -135,10 +135,11 @@ class Acquisition(QGroupBox):
         Update the acquisition status based on the digitiser state.
         '''
         try:
+            # Safely disconnect previous button signal connections
             self.start_stop.clicked.disconnect()
             self.record.clicked.disconnect()
         except TypeError:
-            pass
+            pass    # ignore error if no connections exist
 
         if self.controller is None:
             self.start_stop.setStyleSheet("background-color: grey; color: black")
@@ -151,6 +152,11 @@ class Acquisition(QGroupBox):
        
 
     def toggle_acquisition(self):
+        '''
+        Toggles aquisition by calling appropriate controller member function and updating
+        local acquiring flag. Calls controller member functions since this code runs on the
+        main thread (not the AcquisitionWorker thread).
+        '''
         if self.acquiring:
             logging.info('Stopping acquisition...')
             self.start_stop.setText("Start")
