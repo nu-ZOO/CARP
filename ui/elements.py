@@ -112,6 +112,9 @@ class Acquisition(QGroupBox):
         
         self.controller = controller
         
+        # local flags (rather than using digitiser flags <-- race condition) 
+        self.acquiring = False
+        self.recording = False
 
         self.start_stop = QPushButton("Start")
         self.record     = QPushButton("Record")
@@ -123,37 +126,49 @@ class Acquisition(QGroupBox):
         layout.addWidget(self.start_stop)
         layout.addWidget(self.record)
         # update button based on digitiser state
+
         self.update()
     
 
-    def update(self):
+    def update(self): 
         '''
         Update the acquisition status based on the digitiser state.
         '''
-        if self.controller.digitiser is None:
+        try:
+            # Safely disconnect previous button signal connections
+            self.start_stop.clicked.disconnect()
+            self.record.clicked.disconnect()
+        except TypeError:
+            pass    # ignore error if no connections exist
+
+        if self.controller is None:
             self.start_stop.setStyleSheet("background-color: grey; color: black")
             self.record.setStyleSheet("background-color: grey; color: black")
         else:
-            # start stop
             self.start_stop.setStyleSheet("background-color: green; color: black")
             self.start_stop.clicked.connect(self.toggle_acquisition)
-            # recording...
             self.record.setStyleSheet("background-color: red; color: black")
             self.record.clicked.connect(self.toggle_recording)
-        
+       
 
     def toggle_acquisition(self):
-        if self.controller.digitiser.isAcquiring:
+        '''
+        Toggles aquisition by calling appropriate controller member function and updating
+        local acquiring flag. Calls controller member functions since this code runs on the
+        main thread (not the AcquisitionWorker thread).
+        '''
+        if self.acquiring:
             logging.info('Stopping acquisition...')
             self.start_stop.setText("Start")
             self.start_stop.setStyleSheet("background-color: green; color: black")
+            self.acquiring = False
             # stop the acquisition
-            self.controller.digitiser.stop_acquisition()
+            self.controller.stop_acquisition()
         else:
             logging.info('Starting acquisition...')
             self.start_stop.setText("Stop")
             self.start_stop.setStyleSheet("background-color: red; color: white")
-            self.controller.digitiser.isAcquiring = True
+            self.acquiring = True
             # start the acquisition
             self.controller.start_acquisition()
             

@@ -6,6 +6,7 @@ Class(es) to handle the digitiser connection and acquisition.
 import numpy as np
 import logging
 from typing import Optional
+import time
 
 from felib.dig1_utils import generate_digitiser_uri
 
@@ -205,7 +206,7 @@ class Digitiser():
         try:
             self.dig.cmd.ARMACQUISITION()
         except Exception as e:
-            logging.exception("Starting acquisition failed:")
+            logging.exception(f"Starting acquisition failed: {e}")
         
         # start recording function
         #self.trigger_and_record()
@@ -229,7 +230,6 @@ class Digitiser():
             logging.info("Digitiser acquisition stopped.")
         except Exception as e:
             logging.exception("Stopping acsquisition failed:")
-
 
     def acquire(self):
         match self.trigger_mode:
